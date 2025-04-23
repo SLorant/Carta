@@ -1,26 +1,78 @@
 @import "tailwindcss";
+@import "@liveblocks/react-comments/styles.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+* {
+  font-family: recursive, sans-serif;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+h1,
+h2,
+button {
+  font-family: jaini, sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer utilities {
+  .no-ring {
+    @reference @apply outline-none ring-0 ring-offset-0 focus:ring-0 focus:ring-offset-0 focus-visible:ring-offset-0 !important;
+  }
+
+  .input-ring {
+    @reference @apply h-8 rounded-none border-none  bg-transparent outline-none ring-offset-0 focus:ring-1  focus:ring-primary-green focus:ring-offset-0 focus-visible:ring-offset-0 !important;
+  }
+
+  .right-menu-content {
+    @reference @apply flex w-80 flex-col gap-y-1 border-none bg-primary-black py-4 text-white !important;
+  }
+
+  .right-menu-item {
+    @reference @apply flex justify-between px-3 py-2 hover:bg-primary-grey-200 !important;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@theme {
+  /* Container settings */
+  --container-padding: 2rem;
+  --container-2xl-screen: 1400px;
+
+  /* Colors */
+  --color-primary: #c18f6b;
+  --color-secondary: #dfcdc0;
+  --color-background: #33373a;
+  --color-primary-black: #14181f;
+  --color-primary-green: #56ffa6;
+  --color-primary-grey-100: #2b303b;
+  --color-primary-grey-200: #202731;
+  --color-primary-grey-300: #c4d3ed;
+
+  /* Animation durations */
+  --accordion-down-duration: 0.2s;
+  --accordion-up-duration: 0.2s;
+}
+
+/* Keyframes for accordion animations */
+@keyframes accordion-down {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--radix-accordion-content-height);
+  }
+}
+
+@keyframes accordion-up {
+  from {
+    height: var(--radix-accordion-content-height);
+  }
+  to {
+    height: 0;
+  }
+}
+
+/* Example utility classes for animations */
+.accordion-down {
+  animation: accordion-down var(--accordion-down-duration) ease-out;
+}
+
+.accordion-up {
+  animation: accordion-up var(--accordion-up-duration) ease-out;
 }
