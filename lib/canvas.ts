@@ -20,16 +20,31 @@ export const initializeFabric = ({
   canvasRef,
 }: {
   fabricRef: React.MutableRefObject<fabric.Canvas | null>;
-  canvasRef: React.MutableRefObject<HTMLCanvasElement | null>;
+  canvasRef: React.RefObject<HTMLCanvasElement>;
 }) => {
-  // get canvas element
-  const canvasElement = document.getElementById("canvas");
+  // get canvas element from ref
+  const canvasElement = canvasRef.current;
+
+  if (!canvasElement) {
+    console.error("Canvas element not found in ref");
+    throw new Error("Canvas element not found");
+  }
+
+  console.log("Creating fabric canvas with element:", canvasElement);
+  console.log(
+    "Canvas dimensions:",
+    canvasElement.clientWidth,
+    "x",
+    canvasElement.clientHeight
+  );
 
   // create fabric canvas
-  const canvas = new fabric.Canvas(canvasRef.current, {
-    width: canvasElement?.clientWidth,
-    height: canvasElement?.clientHeight,
+  const canvas = new fabric.Canvas(canvasElement, {
+    width: canvasElement.clientWidth || 800,
+    height: canvasElement.clientHeight || 600,
   });
+
+  console.log("Fabric canvas created successfully");
 
   // set canvas reference to fabricRef so we can use it later anywhere outside canvas listener
   fabricRef.current = canvas;
@@ -58,6 +73,7 @@ export const handleCanvasMouseDown = ({
 
   // set canvas drawing mode to false
   canvas.isDrawingMode = false;
+  console.log(selectedShapeRef, canvas);
 
   // if selected shape is freeform, set drawing mode to true and return
   if (selectedShapeRef.current === "freeform") {

@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@import "@liveblocks/react-comments/styles.css";
+@import "@liveblocks/react-ui/styles.css";
 
 * {
   font-family: recursive, sans-serif;
