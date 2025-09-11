@@ -9,31 +9,50 @@ import {
   handleCanvasMouseDown,
   handleCanvasMouseUp,
   handleCanvasObjectModified,
+  handleCanvasObjectScaling,
+  handleCanvasSelectionCreated,
+  handlePathCreated,
   handleResize,
   initializeFabric,
   renderCanvas,
 } from "@/lib/canvas";
 import Navbar from "@/components/Navbar";
-import { ActiveElement } from "@/types/type";
+import { ActiveElement, Attributes } from "@/types/type";
 import { useStorage } from "@/liveblocks.config";
-import { useMutation } from "@liveblocks/react";
+import { useMutation, useRedo, useUndo } from "@liveblocks/react";
 import type { LiveMap, Lson } from "@liveblocks/client";
 import { defaultNavElement } from "@/constants";
-import { handleDelete } from "@/lib/key-events";
+import { handleDelete, handleKeyDown } from "@/lib/key-events";
+import RightSideBar from "@/components/RightSideBar";
+import { handleImageUpload } from "@/lib/shapes";
 
 const Editor = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fabricRef = useRef<fabric.Canvas | null>(null);
   const isDrawing = useRef(false);
   const shapeRef = useRef<fabric.Object | null>(null);
-  const selectedShapeRef = useRef<string | null>("rectangle");
+  const selectedShapeRef = useRef<string | null>(null);
   const activeObjectRef = useRef<fabric.Object | null>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const isEditingRef = useRef<boolean>(false);
+  const [elementAttributes, setElementAttributes] = useState<Attributes>({
+    width: "",
+    height: "",
+    fontSize: "",
+    fontFamily: "",
+    fontWeight: "",
+    fill: "#aabbcc",
+    stroke: "#aabbcc",
+  });
 
   const [activeElement, setActiveElement] = useState<ActiveElement>({
     name: "",
     icon: "",
     value: "",
   });
+
+  const undo = useUndo();
+  const redo = useRedo();
 
   const deleteAllShapes = useMutation(({ storage }) => {
     const canvasObjects = storage.get("canvasObjects") as LiveMap<string, Lson>;
@@ -65,6 +84,13 @@ const Editor = () => {
       case "delete":
         handleDelete(fabricRef.current, deleteShapeFromStorage);
         setActiveElement(defaultNavElement);
+        break;
+      case "image":
+        imageInputRef.current?.click();
+        isDrawing.current = false;
+        if (fabricRef.current) {
+          fabricRef.current.isDrawingMode = false;
+        }
         break;
       default:
         break;
@@ -142,11 +168,44 @@ const Editor = () => {
         });
       });
 
+      canvas.on("selection:created", (options) => {
+        handleCanvasSelectionCreated({
+          options,
+          isEditingRef,
+          setElementAttributes,
+        });
+      });
+
+      canvas.on("object:scaling", (options) => {
+        handleCanvasObjectScaling({
+          options,
+          setElementAttributes,
+        });
+      });
+
+      canvas.on("path:created", (options) => {
+        handlePathCreated({
+          options,
+          syncShapeInStorage,
+        });
+      });
+
       const handleWindowResize = () => {
         handleResize({ canvas });
       };
 
       window.addEventListener("resize", handleWindowResize);
+
+      window.addEventListener("keydown", (e) => {
+        handleKeyDown({
+          e,
+          canvas,
+          undo,
+          deleteShapeFromStorage,
+          redo,
+          syncShapeInStorage,
+        });
+      });
 
       return () => {
         canvas.dispose();
@@ -162,7 +221,6 @@ const Editor = () => {
       }
     };
   }, []);
-  const ref = useRef(null);
 
   useEffect(() => {
     renderCanvas({ activeObjectRef, canvasObjects, fabricRef });
@@ -173,10 +231,29 @@ const Editor = () => {
       <Navbar
         activeElement={activeElement}
         handleActiveElement={handleActiveElement}
-        handleImageUpload={() => {}}
-        imageInputRef={ref}
+        handleImageUpload={(e) => {
+          e.stopPropagation();
+          handleImageUpload({
+            file: e.target.files?.[0],
+            canvas: fabricRef as any,
+            shapeRef,
+            syncShapeInStorage,
+          });
+        }}
+        imageInputRef={imageInputRef}
       />
-      <Live canvasRef={canvasRef} />
+      <div className="overflow-hidden relative w-screen h-screen">
+        <Live canvasRef={canvasRef} undo={undo} redo={redo} />
+        <RightSideBar
+          elementAttributes={elementAttributes}
+          activeObjectRef={activeObjectRef}
+          fabricRef={fabricRef}
+          isEditingRef={isEditingRef}
+          setElementAttributes={setElementAttributes}
+          syncShapeInStorage={syncShapeInStorage}
+          allShapes={Array.from(canvasObjects)}
+        />
+      </div>
     </>
   );
 };

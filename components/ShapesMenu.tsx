@@ -77,13 +77,13 @@ const ShapesMenu = ({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {/*   <input
+      <input
         type="file"
         className="hidden"
         ref={imageInputRef}
         accept="image/*"
         onChange={handleImageUpload}
-      /> */}
+      />
     </>
   );
 };

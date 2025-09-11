@@ -6,7 +6,7 @@ type Props = {
 
 const ReactionSelector = ({ setReaction }: Props) => (
   <div
-    className="absolute bottom-20 left-0 right-0 mx-auto w-fit transform rounded-full bg-white px-2"
+    className="absolute bottom-20 left-0 right-0 z-50 mx-auto w-fit transform rounded-full bg-white px-2"
     onPointerMove={(e) => e.stopPropagation()}
   >
     <ReactionButton reaction="👍" onSelect={setReaction} />

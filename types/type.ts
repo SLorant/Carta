@@ -1,4 +1,3 @@
-import { BaseUserMeta, User } from "@liveblocks/client";
 import { Gradient, Pattern } from "fabric/fabric-impl";
 
 export enum CursorMode {
@@ -64,7 +63,7 @@ export type ActiveElement = {
   icon: string;
 } | null;
 
-export interface CustomFabricObject<T extends fabric.Object>
+export interface CustomFabricObject<_ extends fabric.Object>
   extends fabric.Object {
   objectId?: string;
 }
@@ -72,7 +71,7 @@ export interface CustomFabricObject<T extends fabric.Object>
 export type ModifyShape = {
   canvas: fabric.Canvas;
   property: string;
-  value: any;
+  value: string;
   activeObjectRef: React.MutableRefObject<fabric.Object | null>;
   syncShapeInStorage: (shape: fabric.Object) => void;
 };
@@ -116,12 +115,6 @@ export type ShapesMenuProps = {
   handleActiveElement: any;
   handleImageUpload: any;
   imageInputRef: any;
-};
-
-export type Presence = any;
-
-export type LiveCursorProps = {
-  others: readonly User<Presence, BaseUserMeta>[];
 };
 
 export type CanvasMouseDown = {
