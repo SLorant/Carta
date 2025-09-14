@@ -2,7 +2,6 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import Live from "@/components/Live";
-import { Room } from "../Room";
 import { fabric } from "fabric";
 import {
   handleCanvaseMouseMove,
@@ -11,12 +10,12 @@ import {
   handleCanvasObjectModified,
   handleCanvasObjectScaling,
   handleCanvasSelectionCreated,
+  handleCanvasSelectionUpdated,
   handlePathCreated,
   handleResize,
   initializeFabric,
   renderCanvas,
 } from "@/lib/canvas";
-import Navbar from "@/components/Navbar";
 import { ActiveElement, Attributes } from "@/types/type";
 import { useStorage } from "@/liveblocks.config";
 import { useMutation, useRedo, useUndo } from "@liveblocks/react";
@@ -25,6 +24,10 @@ import { defaultNavElement } from "@/constants";
 import { handleDelete, handleKeyDown } from "@/lib/key-events";
 import RightSideBar from "@/components/RightSideBar";
 import { handleImageUpload } from "@/lib/shapes";
+import LeftSideBar from "@/components/LeftSideBar";
+import TopBar from "@/components/TopBar";
+import { onAuthStateChanged } from "firebase/auth";
+import { auth } from "@/firebase.config";
 
 const Editor = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -43,6 +46,7 @@ const Editor = () => {
     fontWeight: "",
     fill: "#aabbcc",
     stroke: "#aabbcc",
+    opacity: "1",
   });
 
   const [activeElement, setActiveElement] = useState<ActiveElement>({
@@ -53,13 +57,26 @@ const Editor = () => {
 
   const undo = useUndo();
   const redo = useRedo();
+  const [userName, setUserName] = React.useState("");
+
+  useEffect(() => {
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        const uid = user.uid;
+        setUserName(user.email ?? "");
+        console.log("uid", uid);
+      } else {
+        console.log("user is logged out");
+      }
+    });
+  }, []);
 
   const deleteAllShapes = useMutation(({ storage }) => {
     const canvasObjects = storage.get("canvasObjects") as LiveMap<string, Lson>;
 
     if (!canvasObjects || canvasObjects.size === 0) return true;
 
-    for (const [key, value] of canvasObjects.entries()) {
+    for (const [key] of canvasObjects.entries()) {
       canvasObjects.delete(key);
     }
 
@@ -72,6 +89,26 @@ const Editor = () => {
     canvasObjects.delete(objectId);
   }, []);
 
+  useEffect(() => {
+    const onKeyUp = (event: KeyboardEvent) => {
+      if (
+        event.key === "Delete" &&
+        activeElement !== defaultNavElement &&
+        fabricRef.current
+      ) {
+        handleDelete(fabricRef.current, deleteShapeFromStorage);
+        setActiveElement(defaultNavElement);
+        console.log("delete");
+      }
+    };
+
+    window.addEventListener("keyup", onKeyUp);
+
+    return () => {
+      window.removeEventListener("keyup", onKeyUp);
+    };
+  }, []);
+
   const handleActiveElement = (elem: ActiveElement) => {
     setActiveElement(elem);
 
@@ -82,8 +119,11 @@ const Editor = () => {
         setActiveElement(defaultNavElement);
         break;
       case "delete":
-        handleDelete(fabricRef.current, deleteShapeFromStorage);
-        setActiveElement(defaultNavElement);
+        if (fabricRef.current) {
+          handleDelete(fabricRef.current, deleteShapeFromStorage);
+          setActiveElement(defaultNavElement);
+        }
+
         break;
       case "image":
         imageInputRef.current?.click();
@@ -108,10 +148,66 @@ const Editor = () => {
     const shapeData = object.toJSON();
     shapeData.objectId = objectId;
 
+    // Include custom zIndex property in storage
+    if ((object as fabric.Object & { zIndex?: number }).zIndex !== undefined) {
+      (shapeData as Record<string, unknown>).zIndex = (
+        object as fabric.Object & { zIndex: number }
+      ).zIndex;
+    }
+
     const canvasObjects = storage.get("canvasObjects") as LiveMap<string, Lson>;
 
     canvasObjects?.set(objectId, shapeData);
   }, []);
+
+  const syncAllShapesToStorage = useMutation(
+    ({ storage }, objects: fabric.Object[]) => {
+      const canvasObjects = storage.get("canvasObjects") as LiveMap<
+        string,
+        Lson
+      >;
+
+      objects.forEach((object) => {
+        if (
+          object &&
+          (object as fabric.Object & { objectId: string }).objectId
+        ) {
+          const objectWithId = object as fabric.Object & { objectId: string };
+          const { objectId } = objectWithId;
+          // Use the same approach as syncShapeInStorage
+          const shapeData = object.toJSON();
+          (shapeData as Record<string, unknown>).objectId = objectId;
+          canvasObjects?.set(objectId, shapeData as unknown as Lson);
+        }
+      });
+    },
+    []
+  );
+
+  const reorderShapes = useMutation(({ storage }, objects: fabric.Object[]) => {
+    // Set flag to prevent renderCanvas from running
+    isReorderingRef.current = true;
+
+    const canvasObjects = storage.get("canvasObjects") as LiveMap<string, Lson>;
+
+    objects.forEach((object) => {
+      if (object && (object as fabric.Object & { objectId: string }).objectId) {
+        const objectWithId = object as fabric.Object & { objectId: string };
+        const { objectId } = objectWithId;
+        const shapeData = object.toJSON();
+        (shapeData as Record<string, unknown>).objectId = objectId;
+        canvasObjects?.set(objectId, shapeData as unknown as Lson);
+      }
+    });
+
+    // Reset flag after a short delay to allow the next render
+    setTimeout(() => {
+      isReorderingRef.current = false;
+    }, 100);
+  }, []);
+
+  const [isCanvasInitialized, setIsCanvasInitialized] = useState(false);
+  const isReorderingRef = useRef(false);
 
   useEffect(() => {
     console.log("useEffect running, canvasRef:", canvasRef);
@@ -134,6 +230,7 @@ const Editor = () => {
           isDrawing,
           shapeRef,
           selectedShapeRef,
+          activeObjectRef,
         });
       });
 
@@ -176,6 +273,14 @@ const Editor = () => {
         });
       });
 
+      canvas.on("selection:updated", (options) => {
+        handleCanvasSelectionUpdated({
+          options,
+          isEditingRef,
+          setElementAttributes,
+        });
+      });
+
       canvas.on("object:scaling", (options) => {
         handleCanvasObjectScaling({
           options,
@@ -207,6 +312,9 @@ const Editor = () => {
         });
       });
 
+      // Mark canvas as initialized and trigger initial render
+      setIsCanvasInitialized(true);
+
       return () => {
         canvas.dispose();
       };
@@ -220,41 +328,45 @@ const Editor = () => {
         fabricRef.current = null;
       }
     };
-  }, []);
+  }, [deleteShapeFromStorage, redo, syncShapeInStorage, undo]);
 
   useEffect(() => {
-    renderCanvas({ activeObjectRef, canvasObjects, fabricRef });
-  }, [canvasObjects]);
+    if (isCanvasInitialized && fabricRef.current) {
+      renderCanvas({ activeObjectRef, canvasObjects, fabricRef });
+    }
+  }, [canvasObjects, isCanvasInitialized]);
 
   return (
-    <>
-      <Navbar
+    <div className="overflow-hidden relative w-screen h-screen">
+      <TopBar userName={userName} />
+      <LeftSideBar
         activeElement={activeElement}
         handleActiveElement={handleActiveElement}
         handleImageUpload={(e) => {
           e.stopPropagation();
-          handleImageUpload({
-            file: e.target.files?.[0],
-            canvas: fabricRef as any,
-            shapeRef,
-            syncShapeInStorage,
-          });
+          const file = e.target.files?.[0];
+          if (file && fabricRef.current) {
+            handleImageUpload({
+              file,
+              canvas: fabricRef,
+              shapeRef,
+              syncShapeInStorage,
+            });
+          }
         }}
         imageInputRef={imageInputRef}
       />
-      <div className="overflow-hidden relative w-screen h-screen">
-        <Live canvasRef={canvasRef} undo={undo} redo={redo} />
-        <RightSideBar
-          elementAttributes={elementAttributes}
-          activeObjectRef={activeObjectRef}
-          fabricRef={fabricRef}
-          isEditingRef={isEditingRef}
-          setElementAttributes={setElementAttributes}
-          syncShapeInStorage={syncShapeInStorage}
-          allShapes={Array.from(canvasObjects)}
-        />
-      </div>
-    </>
+      <Live canvasRef={canvasRef} undo={undo} redo={redo} />
+      <RightSideBar
+        elementAttributes={elementAttributes}
+        activeObjectRef={activeObjectRef}
+        fabricRef={fabricRef}
+        isEditingRef={isEditingRef}
+        setElementAttributes={setElementAttributes}
+        syncShapeInStorage={syncShapeInStorage}
+        allShapes={Array.from(canvasObjects)}
+      />
+    </div>
   );
 };
 

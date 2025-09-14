@@ -66,6 +66,7 @@ export const PinnedThread = ({ thread, onFocus, ...props }: Props) => {
         {!minimized ? (
           <div className="flex min-w-60 flex-col overflow-hidden rounded-lg bg-white text-sm shadow">
             <Thread
+              className="bg-black text-primary"
               thread={thread}
               indentCommentContent={false}
               onKeyUp={(e) => {

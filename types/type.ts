@@ -55,6 +55,7 @@ export type Attributes = {
   fontWeight: string;
   fill: string;
   stroke: string;
+  opacity: string;
 };
 
 export type ActiveElement = {
@@ -63,8 +64,7 @@ export type ActiveElement = {
   icon: string;
 } | null;
 
-export interface CustomFabricObject<_ extends fabric.Object>
-  extends fabric.Object {
+export interface CustomFabricObject extends fabric.Object {
   objectId?: string;
 }
 
@@ -84,18 +84,19 @@ export type ElementDirection = {
 
 export type ImageUpload = {
   file: File;
-  canvas: React.MutableRefObject<fabric.Canvas>;
+  canvas: React.MutableRefObject<fabric.Canvas | null>;
   shapeRef: React.MutableRefObject<fabric.Object | null>;
   syncShapeInStorage: (shape: fabric.Object) => void;
 };
 
 export type RightSidebarProps = {
+  allShapes: Array<any>;
   elementAttributes: Attributes;
   setElementAttributes: React.Dispatch<React.SetStateAction<Attributes>>;
-  fabricRef: React.RefObject<fabric.Canvas | null>;
-  activeObjectRef: React.RefObject<fabric.Object | null>;
+  fabricRef: React.MutableRefObject<fabric.Canvas | null>;
+  activeObjectRef: React.MutableRefObject<fabric.Object | null>;
   isEditingRef: React.MutableRefObject<boolean>;
-  syncShapeInStorage: (obj: any) => void;
+  syncShapeInStorage: (obj: fabric.Object) => void;
 };
 
 export type NavbarProps = {
@@ -123,6 +124,7 @@ export type CanvasMouseDown = {
   selectedShapeRef: any;
   isDrawing: React.MutableRefObject<boolean>;
   shapeRef: React.MutableRefObject<fabric.Object | null>;
+  activeObjectRef: React.MutableRefObject<fabric.Object | null>;
 };
 
 export type CanvasMouseMove = {

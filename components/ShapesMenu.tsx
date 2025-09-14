@@ -27,46 +27,50 @@ const ShapesMenu = ({
       <DropdownMenu>
         <DropdownMenuTrigger asChild className="no-ring">
           <Button
-            className="relative h-5 w-5 object-contain"
+            className="relative h-full w-full bg-transparent hover:bg-transparent"
             onClick={() => handleActiveElement(item)}
           >
-            <Image
-              src={isDropdownElem ? activeElement.icon : item.icon}
-              alt={item.name}
-              fill
-              className={isDropdownElem ? "invert" : ""}
-            />
+            <div className="relative h-6 w-6 object-contain bg-transparent hover:bg-transparent">
+              <Image
+                src={isDropdownElem ? activeElement.icon : item.icon}
+                alt={item.name}
+                fill
+                className={isDropdownElem ? "invert" : ""}
+              />
+            </div>
           </Button>
         </DropdownMenuTrigger>
 
-        <DropdownMenuContent className="mt-5 flex flex-col gap-y-1 border-none bg-primary-black py-4 text-white">
+        <DropdownMenuContent className="absolute ml-10 -top-16 flex flex-col gap-y-1 border-none bg-black/25 py-2 text-secondary">
           {item.value.map((elem) => (
             <Button
               key={elem?.name}
               onClick={() => {
                 handleActiveElement(elem);
               }}
-              className={`flex h-fit justify-between gap-10 rounded-none px-5 py-3 focus:border-none ${
+              className={`group flex h-fit justify-between gap-10 rounded-md w-40 px-5 py-3 focus:border-none ${
                 activeElement.value === elem?.value
-                  ? "bg-primary-green"
-                  : "hover:bg-primary-grey-200"
+                  ? "bg-secondary hover:bg-secondary"
+                  : "hover:bg-secondary duration-200 ease-in-out"
               }`}
             >
-              <div className="group flex items-center gap-2">
+              <div className="flex items-center gap-2">
                 <Image
                   src={elem?.icon as string}
                   alt={elem?.name as string}
                   width={20}
                   height={20}
                   className={
-                    activeElement.value === elem?.value ? "invert" : ""
+                    activeElement.value === elem?.value
+                      ? "invert"
+                      : "group-hover:invert duration-200 ease-in-out"
                   }
                 />
                 <p
                   className={`text-sm  ${
                     activeElement.value === elem?.value
                       ? "text-primary-black"
-                      : "text-white"
+                      : "text-white group-hover:invert duration-200 ease-in-out"
                   }`}
                 >
                   {elem?.name}

@@ -42,6 +42,7 @@ export const initializeFabric = ({
   const canvas = new fabric.Canvas(canvasElement, {
     width: canvasElement.clientWidth || 800,
     height: canvasElement.clientHeight || 600,
+    backgroundColor: "#333",
   });
 
   console.log("Fabric canvas created successfully");
@@ -59,6 +60,7 @@ export const handleCanvasMouseDown = ({
   selectedShapeRef,
   isDrawing,
   shapeRef,
+  activeObjectRef,
 }: CanvasMouseDown) => {
   // get pointer coordinates
   const pointer = canvas.getPointer(options.e);
@@ -89,12 +91,16 @@ export const handleCanvasMouseDown = ({
   if (
     target &&
     (target.type === selectedShapeRef.current ||
-      target.type === "activeSelection")
+      target.type === "activeSelection" ||
+      selectedShapeRef.current === null) // Allow selection even when no shape tool is active
   ) {
     isDrawing.current = false;
 
     // set active object to target
     canvas.setActiveObject(target);
+
+    // Also set the activeObjectRef to maintain the selection reference
+    activeObjectRef.current = target;
 
     /**
      * setCoords() is used to update the controls of the object
@@ -107,13 +113,19 @@ export const handleCanvasMouseDown = ({
     // create custom fabric object/shape and set it to shapeRef
     shapeRef.current = createSpecificShape(
       selectedShapeRef.current,
-      pointer as any
+      pointer as PointerEvent
     );
 
     // if shapeRef is not null, add it to canvas
     if (shapeRef.current) {
       // add: http://fabricjs.com/docs/fabric.Canvas.html#add
       canvas.add(shapeRef.current);
+
+      // Assign z-index based on current canvas position
+      const objects = canvas.getObjects();
+      const newIndex = objects.length - 1;
+      (shapeRef.current as fabric.Object & { zIndex: number }).zIndex =
+        newIndex;
     }
   }
 };
@@ -202,16 +214,25 @@ export const handleCanvasMouseUp = ({
   // sync shape in storage as drawing is stopped
   syncShapeInStorage(shapeRef.current);
 
-  // set everything to null
-  shapeRef.current = null;
-  activeObjectRef.current = null;
-  selectedShapeRef.current = null;
+  // Only clear activeObjectRef and selectedShapeRef if we were actually drawing a new shape
+  // If we were just moving/selecting an existing object, keep the selection
+  if (shapeRef.current) {
+    // We were creating a new shape, so clear everything
+    shapeRef.current = null;
+    activeObjectRef.current = null;
+    selectedShapeRef.current = null;
 
-  // if canvas is not in drawing mode, set active element to default nav element after 700ms
-  if (!canvas.isDrawingMode) {
-    setTimeout(() => {
-      setActiveElement(defaultNavElement);
-    }, 700);
+    // if canvas is not in drawing mode, set active element to default nav element after 700ms
+    if (!canvas.isDrawingMode) {
+      setTimeout(() => {
+        setActiveElement(defaultNavElement);
+      }, 700);
+    }
+  } else {
+    // We were just interacting with existing objects, only clear shapeRef and selectedShapeRef
+    shapeRef.current = null;
+    selectedShapeRef.current = null;
+    // Keep activeObjectRef.current so the selection remains visible
   }
 };
 
@@ -292,24 +313,28 @@ export const handleCanvasSelectionCreated = ({
   isEditingRef,
   setElementAttributes,
 }: CanvasSelectionCreated) => {
-  // if user is editing manually, return
-  if (isEditingRef.current) return;
+  // Reset editing state when a new selection is made
+  isEditingRef.current = false;
 
   // if no element is selected, return
   if (!options?.selected) return;
 
   // get the selected element
-  const selectedElement = options?.selected[0] as fabric.Object;
+  const selectedElement = options?.selected[0] as fabric.Object & {
+    fontSize: string;
+    fontFamily: string;
+    fontWeight: string;
+  };
 
   // if only one element is selected, set element attributes
   if (selectedElement && options.selected.length === 1) {
     // calculate scaled dimensions of the object
     const scaledWidth = selectedElement?.scaleX
-      ? selectedElement?.width! * selectedElement?.scaleX
+      ? (selectedElement?.width ?? 0) * selectedElement?.scaleX
       : selectedElement?.width;
 
     const scaledHeight = selectedElement?.scaleY
-      ? selectedElement?.height! * selectedElement?.scaleY
+      ? (selectedElement?.height ?? 0) * selectedElement?.scaleY
       : selectedElement?.height;
 
     setElementAttributes({
@@ -317,14 +342,21 @@ export const handleCanvasSelectionCreated = ({
       height: scaledHeight?.toFixed(0).toString() || "",
       fill: selectedElement?.fill?.toString() || "",
       stroke: selectedElement?.stroke || "",
-      // @ts-ignore
       fontSize: selectedElement?.fontSize || "",
-      // @ts-ignore
       fontFamily: selectedElement?.fontFamily || "",
-      // @ts-ignore
       fontWeight: selectedElement?.fontWeight || "",
+      opacity: selectedElement?.opacity?.toString() || "1",
     });
   }
+};
+
+// handle when selection is updated (changing from one object to another)
+export const handleCanvasSelectionUpdated = ({
+  options,
+  isEditingRef,
+  setElementAttributes,
+}: CanvasSelectionCreated) => {
+  handleCanvasSelectionCreated({ options, isEditingRef, setElementAttributes });
 };
 
 // update element attributes when element is scaled
@@ -336,11 +368,11 @@ export const handleCanvasObjectScaling = ({
 
   // calculate scaled dimensions of the object
   const scaledWidth = selectedElement?.scaleX
-    ? selectedElement?.width! * selectedElement?.scaleX
+    ? (selectedElement?.width ?? 0) * selectedElement?.scaleX
     : selectedElement?.width;
 
   const scaledHeight = selectedElement?.scaleY
-    ? selectedElement?.height! * selectedElement?.scaleY
+    ? (selectedElement?.height ?? 0) * selectedElement?.scaleY
     : selectedElement?.height;
 
   setElementAttributes((prev) => ({
@@ -356,11 +388,56 @@ export const renderCanvas = ({
   canvasObjects,
   activeObjectRef,
 }: RenderCanvas) => {
-  // clear canvas
-  fabricRef.current?.clear();
+  console.log(
+    "renderCanvas called, canvasObjects size:",
+    (canvasObjects as Map<string, unknown>)?.size
+  );
 
-  // render all objects on canvas
-  Array.from(canvasObjects, ([objectId, objectData]) => {
+  // Safety check: ensure canvas is initialized
+  if (!fabricRef.current) {
+    console.log("Canvas not initialized yet, skipping render");
+    return;
+  }
+
+  // Store the current background color before clearing
+  const backgroundColor = fabricRef.current.backgroundColor;
+
+  // clear canvas
+  fabricRef.current.clear();
+
+  // Restore the background color after clearing (fallback to #333 if undefined)
+  fabricRef.current.setBackgroundColor(
+    backgroundColor || "#333",
+    fabricRef.current.renderAll.bind(fabricRef.current)
+  );
+
+  // render all objects on canvas in proper z-index order
+  const objectEntries = Array.from(
+    canvasObjects as Map<string, fabric.Object & { zIndex?: number }>
+  );
+
+  console.log(canvasObjects);
+
+  console.log(
+    "renderCanvas - objectEntries before sort:",
+    objectEntries.map(([id, obj]) => ({ id, zIndex: obj.zIndex }))
+  );
+
+  const sortedCanvasObjects = objectEntries.sort((a, b) => {
+    const [, objectDataA] = a;
+    const [, objectDataB] = b;
+    const aZIndex = objectDataA?.zIndex ?? 0;
+    const bZIndex = objectDataB?.zIndex ?? 0;
+    return aZIndex - bZIndex; // Sort by z-index (bottom to top)
+  });
+
+  console.log(
+    "renderCanvas - sortedCanvasObjects after sort:",
+    sortedCanvasObjects.map(([id, obj]) => ({ id, zIndex: obj.zIndex }))
+  );
+
+  sortedCanvasObjects.forEach((entry) => {
+    const [objectId, objectData] = entry;
     /**
      * enlivenObjects() is used to render objects on canvas.
      * It takes two arguments:
@@ -377,6 +454,16 @@ export const renderCanvas = ({
           // if element is active, keep it in active state so that it can be edited further
           if (activeObjectRef.current?.objectId === objectId) {
             fabricRef.current?.setActiveObject(enlivenedObj);
+          }
+
+          // Restore zIndex from storage if it exists
+          const storedZIndex = (objectData as unknown as Record<string, unknown>).zIndex as number | undefined;
+          if (storedZIndex !== undefined) {
+            (enlivenedObj as fabric.Object & { zIndex: number }).zIndex = storedZIndex;
+          } else {
+            // Assign z-index based on the current position if not in storage
+            const currentIndex = fabricRef.current?.getObjects().length ?? 0;
+            (enlivenedObj as fabric.Object & { zIndex: number }).zIndex = currentIndex;
           }
 
           // add object to canvas

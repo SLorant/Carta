@@ -2,19 +2,15 @@ import {
   useBroadcastEvent,
   useEventListener,
   useMyPresence,
-  useOthers,
 } from "@liveblocks/react";
 import LiveCursors from "./cursor/LiveCursors";
 import React, { useCallback, useEffect, useState } from "react";
 import CursorChat from "./cursor/CursorChat";
 import { CursorMode, CursorState, Reaction, ReactionEvent } from "@/types/type";
-import { useRouter } from "next/navigation";
-import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "@/firebase.config";
 import ReactionSelector from "./reaction/ReactionButton";
 import FlyingReaction from "./reaction/FlyingReaction";
 import useInterval from "@/hooks/useInterval";
-import { shapeElements, shortcuts } from "@/constants";
+import { shortcuts } from "@/constants";
 import { Comments } from "./comments/Comments";
 import {
   ContextMenu,
@@ -22,7 +18,7 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from "./ui/context-menu";
-import { Presence } from "@/liveblocks.config";
+import BackgroundBlur from "./BackgroundBlur";
 
 type Props = {
   canvasRef: React.RefObject<HTMLCanvasElement>;
@@ -31,22 +27,6 @@ type Props = {
 };
 
 const Live = ({ canvasRef, undo, redo }: Props) => {
-  const router = useRouter();
-  const [userName, setUserName] = React.useState("");
-
-  useEffect(() => {
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        const uid = user.uid;
-        setUserName(user.email ?? "");
-        console.log("uid", uid);
-      } else {
-        console.log("user is logged out");
-      }
-    });
-  }, []);
-
-  const others = useOthers();
   const [{ cursor }, updateMyPresence] = useMyPresence();
   const [cursorState, setCursorState] = useState<CursorState>({
     mode: CursorMode.Hidden,
@@ -68,10 +48,11 @@ const Live = ({ canvasRef, undo, redo }: Props) => {
       cursorState.isPressed &&
       cursor
     ) {
+      const cursorPos = cursor as { x: number; y: number };
       setReaction((reactions) =>
         reactions.concat([
           {
-            point: { x: cursor.x, y: cursor.y },
+            point: { x: cursorPos.x, y: cursorPos.y },
             value: cursorState.reaction,
             timestamp: Date.now(),
           },
@@ -79,8 +60,8 @@ const Live = ({ canvasRef, undo, redo }: Props) => {
       );
 
       broadcast({
-        x: cursor.x,
-        y: cursor.y,
+        x: cursorPos.x,
+        y: cursorPos.y,
         value: cursorState.reaction,
       });
     }
@@ -158,6 +139,8 @@ const Live = ({ canvasRef, undo, redo }: Props) => {
         setCursorState({
           mode: CursorMode.ReactionSelector,
         });
+      } else if (event.key === "Delete") {
+        console.log("delete");
       }
     };
     const onKeyDown = (event: KeyboardEvent) => {
@@ -178,45 +161,6 @@ const Live = ({ canvasRef, undo, redo }: Props) => {
   const setReactions = useCallback((reaction: string) => {
     setCursorState({ mode: CursorMode.Reaction, reaction, isPressed: false });
   }, []);
-
-  const toolbarActions = [
-    {
-      icon: "cursor.svg",
-      name: "Cursor",
-      onClick: () => {},
-      value: "select",
-    },
-    {
-      icon: "brush.svg",
-      name: "brush",
-      onClick: () => {},
-      value: shapeElements,
-    },
-    {
-      icon: "text.svg",
-      name: "Text",
-      onClick: () => {},
-      value: "text",
-    },
-    {
-      icon: "path.svg",
-      name: "Path",
-      onClick: () => {},
-      value: "delete",
-    },
-    {
-      icon: "castle.svg",
-      name: "Castle",
-      onClick: () => {},
-      value: "reset",
-    },
-    {
-      icon: "wand.svg",
-      name: "Wand",
-      onClick: () => {},
-      value: "comments",
-    },
-  ];
 
   const handleContextMenuClick = useCallback((key: string) => {
     switch (key) {
@@ -245,47 +189,10 @@ const Live = ({ canvasRef, undo, redo }: Props) => {
 
   return (
     <>
-      <div
-        className="absolute top-0 left-0 z-20 w-screen min-h-screen h-full"
-        style={{
-          background:
-            "linear-gradient(90deg,rgba(0, 0, 0, 0.5) 0%, rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, 0.5) 100%)",
-        }}
-      ></div>
-      <div
-        className="absolute top-0 left-0 z-20 w-screen min-h-screen h-full"
-        style={{
-          background:
-            "linear-gradient(180deg,rgba(0, 0, 0, 0.5) 0%, rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, 0) 100%)",
-        }}
-      ></div>
-      <section className="absolute border-r-2 border-black top-20 left-0 bg-black/25 w-20 h-full z-50">
-        <div className="w-full flex flex-col items-center justify-center h-16 p-2 border-b-5 border-gray-400">
-          <h2 className="text-primary text-3xl">TOOLS</h2>
-        </div>
-        {toolbarActions.map((action, index) => (
-          <div
-            key={index}
-            className="w-full flex flex-col items-center justify-center h-18 p-2 border-b-5 border-gray-400"
-            onClick={action.onClick}
-          >
-            {/*    {Array.isArray(action.value) ? (
-              <ShapesMenu />
-            ) : action.value === "comments" ? (
-              <NewThread></NewThread>
-            ) : (
-              <img
-                className="w-10  cursor-pointer"
-                src={action.icon}
-                alt={action.name}
-              />
-            )} */}
-          </div>
-        ))}
-      </section>
+      <BackgroundBlur />
       <ContextMenu>
         <ContextMenuTrigger
-          className="z-40 px-60 pt-28 relative w-screen h-full flex flex-1 flex-col items-center justify-start"
+          className="z-40 pt-[10%] pl-[10%] pr-[20%] pb-[5%] relative w-screen h-screen  flex flex-1 flex-col items-center justify-start"
           onPointerMove={handlePointerMove}
           onPointerLeave={handlePointerLeave}
           onPointerDown={handlePointerDown}
@@ -295,22 +202,8 @@ const Live = ({ canvasRef, undo, redo }: Props) => {
             cursor: cursorState.mode === CursorMode.Chat ? "none" : "auto",
           }}
         >
-          <div className="absolute px-10 bg-black/10 border-b-2 pb-4 border-black top-0 pt-2 w-full h-20 flex justify-between text-secondary ">
-            <button
-              className="text-4xl text-secondary cursor-pointer opacity-50"
-              onClick={() => router.push("/")}
-            >
-              CARTA
-            </button>
-            <button
-              className="text-4xl cursor-pointer underline"
-              onClick={() => router.push("/profile")}
-            >
-              {userName}
-            </button>
-          </div>
-
           <canvas ref={canvasRef} className="z-40 w-full h-full" />
+
           {reaction.map((reaction) => (
             <FlyingReaction
               key={reaction.timestamp.toString()}
@@ -323,7 +216,7 @@ const Live = ({ canvasRef, undo, redo }: Props) => {
 
           {cursor && (
             <CursorChat
-              cursor={cursor}
+              cursor={cursor as { x: number; y: number }}
               cursorState={cursorState}
               setCursorState={setCursorState}
               updateMyPresence={updateMyPresence}
@@ -333,7 +226,7 @@ const Live = ({ canvasRef, undo, redo }: Props) => {
             <ReactionSelector setReaction={setReactions} />
           )}
 
-          <LiveCursors others={others} />
+          <LiveCursors />
 
           <Comments />
         </ContextMenuTrigger>

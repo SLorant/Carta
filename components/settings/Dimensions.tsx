@@ -19,14 +19,14 @@ const Dimensions = ({
   isEditingRef,
   handleInputChange,
 }: Props) => (
-  <section className="flex flex-col border-b border-primary-grey-200">
-    <div className="flex flex-col gap-4 px-6 py-3">
+  <section className="flex flex-col border-b border-primary-grey-200 text-secondary">
+    <div className="flex flex-col gap-4 pr-2 pl-2 py-4">
       {dimensionsOptions.map((item) => (
         <div
           key={item.label}
           className="flex flex-1 items-center gap-3 rounded-sm"
         >
-          <Label htmlFor={item.property} className="text-[10px] font-bold">
+          <Label htmlFor={item.property} className="text-base font-bold">
             {item.label}
           </Label>
           <Input

@@ -42,7 +42,7 @@ export const handlePaste = (
                 top: enlivenedObj.top || 0 + 20,
                 objectId: uuidv4(),
                 fill: "#aabbcc",
-              } as CustomFabricObject<any>);
+              } as CustomFabricObject);
 
               canvas.add(enlivenedObj);
               syncShapeInStorage(enlivenedObj);
@@ -66,7 +66,7 @@ export const handleDelete = (
   if (!activeObjects || activeObjects.length === 0) return;
 
   if (activeObjects.length > 0) {
-    activeObjects.forEach((obj: CustomFabricObject<any>) => {
+    activeObjects.forEach((obj: CustomFabricObject) => {
       if (!obj.objectId) return;
       canvas.remove(obj);
       deleteShapeFromStorage(obj.objectId);
@@ -87,7 +87,7 @@ export const handleKeyDown = ({
   deleteShapeFromStorage,
 }: {
   e: KeyboardEvent;
-  canvas: fabric.Canvas | any;
+  canvas: fabric.Canvas;
   undo: () => void;
   redo: () => void;
   syncShapeInStorage: (shape: fabric.Object) => void;

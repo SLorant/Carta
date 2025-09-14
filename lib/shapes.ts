@@ -16,7 +16,7 @@ export const createRectangle = (pointer: PointerEvent) => {
     height: 100,
     fill: "#aabbcc",
     objectId: uuidv4(),
-  } as CustomFabricObject<fabric.Rect>);
+  } as CustomFabricObject);
 
   return rect;
 };
@@ -29,17 +29,18 @@ export const createTriangle = (pointer: PointerEvent) => {
     height: 100,
     fill: "#aabbcc",
     objectId: uuidv4(),
-  } as CustomFabricObject<fabric.Triangle>);
+  } as CustomFabricObject);
 };
 
 export const createCircle = (pointer: PointerEvent) => {
-  return new fabric.Circle({
+  const circle = new fabric.Circle({
     left: pointer.x,
     top: pointer.y,
     radius: 100,
     fill: "#aabbcc",
-    objectId: uuidv4(),
-  } as any);
+  });
+  (circle as fabric.Circle & { objectId?: string }).objectId = uuidv4();
+  return circle;
 };
 
 export const createLine = (pointer: PointerEvent) => {
@@ -49,7 +50,7 @@ export const createLine = (pointer: PointerEvent) => {
       stroke: "#aabbcc",
       strokeWidth: 2,
       objectId: uuidv4(),
-    } as CustomFabricObject<fabric.Line>
+    } as CustomFabricObject
   );
 };
 
@@ -61,7 +62,7 @@ export const createText = (pointer: PointerEvent, text: string) => {
     fontFamily: "Helvetica",
     fontSize: 36,
     fontWeight: "400",
-    objectId: uuidv4()
+    objectId: uuidv4(),
   } as fabric.ITextOptions);
 };
 
@@ -103,15 +104,16 @@ export const handleImageUpload = ({
       img.scaleToWidth(200);
       img.scaleToHeight(200);
 
-      canvas.current.add(img);
+      if (canvas.current) {
+        canvas.current.add(img);
 
-      // @ts-ignore
-      img.objectId = uuidv4();
+        (img as fabric.Image & { objectId?: string }).objectId = uuidv4();
 
-      shapeRef.current = img;
+        shapeRef.current = img;
 
-      syncShapeInStorage(img);
-      canvas.current.requestRenderAll();
+        syncShapeInStorage(img);
+        canvas.current.requestRenderAll();
+      }
     });
   };
 
@@ -145,13 +147,20 @@ export const modifyShape = ({
   // if  property is width or height, set the scale of the selected element
   if (property === "width") {
     selectedElement.set("scaleX", 1);
-    selectedElement.set("width", value);  
+    selectedElement.set("width", Number(value));
   } else if (property === "height") {
     selectedElement.set("scaleY", 1);
-    selectedElement.set("height", value);
+    selectedElement.set("height", Number(value));
+  } else if (property === "opacity") {
+    // Convert opacity to number for fabric.js
+    selectedElement.set("opacity", Number(value));
   } else {
-    if (selectedElement[property as keyof object] === value) return;
-    selectedElement.set(property as keyof object, value);
+    if (
+      (selectedElement as fabric.Object)[property as keyof fabric.Object] ===
+      value
+    )
+      return;
+    selectedElement.set({ [property]: value });
   }
 
   // set selectedElement to activeObjectRef
