@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Live from "@/components/Live";
 import { fabric } from "fabric";
 import {
@@ -26,10 +27,12 @@ import RightSideBar from "@/components/RightSideBar";
 import { handleImageUpload } from "@/lib/shapes";
 import LeftSideBar from "@/components/LeftSideBar";
 import TopBar from "@/components/TopBar";
-import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "@/firebase.config";
+import { Room } from "@/app/Room";
+import { useAuth } from "@/components/AuthProvider";
 
-const Editor = () => {
+function EditorContent() {
+  const { user } = useAuth();
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fabricRef = useRef<fabric.Canvas | null>(null);
   const isDrawing = useRef(false);
@@ -57,19 +60,8 @@ const Editor = () => {
 
   const undo = useUndo();
   const redo = useRedo();
-  const [userName, setUserName] = React.useState("");
 
-  useEffect(() => {
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        const uid = user.uid;
-        setUserName(user.email ?? "");
-        console.log("uid", uid);
-      } else {
-        console.log("user is logged out");
-      }
-    });
-  }, []);
+  const userName = user?.email || "";
 
   const deleteAllShapes = useMutation(({ storage }) => {
     const canvasObjects = storage.get("canvasObjects") as LiveMap<string, Lson>;
@@ -107,10 +99,21 @@ const Editor = () => {
     return () => {
       window.removeEventListener("keyup", onKeyUp);
     };
-  }, []);
+  }, [activeElement, deleteShapeFromStorage]);
 
   const handleActiveElement = (elem: ActiveElement) => {
     setActiveElement(elem);
+
+    // Clear all references and canvas selection when switching tools
+    activeObjectRef.current = null;
+    selectedShapeRef.current = null;
+    shapeRef.current = null;
+
+    // Clear canvas selection if switching to a creation tool or select tool
+    if (fabricRef.current) {
+      fabricRef.current.discardActiveObject();
+      fabricRef.current.renderAll();
+    }
 
     switch (elem?.value) {
       case "reset":
@@ -136,7 +139,10 @@ const Editor = () => {
         break;
     }
 
-    selectedShapeRef.current = elem?.value as string;
+    // Set the selected shape reference based on the tool
+    // For select tool, set to null to enable pure selection mode
+    selectedShapeRef.current =
+      elem?.value === "select" ? null : (elem?.value as string);
   };
 
   const canvasObjects = useStorage((root) => root.canvasObjects);
@@ -160,54 +166,7 @@ const Editor = () => {
     canvasObjects?.set(objectId, shapeData);
   }, []);
 
-  const syncAllShapesToStorage = useMutation(
-    ({ storage }, objects: fabric.Object[]) => {
-      const canvasObjects = storage.get("canvasObjects") as LiveMap<
-        string,
-        Lson
-      >;
-
-      objects.forEach((object) => {
-        if (
-          object &&
-          (object as fabric.Object & { objectId: string }).objectId
-        ) {
-          const objectWithId = object as fabric.Object & { objectId: string };
-          const { objectId } = objectWithId;
-          // Use the same approach as syncShapeInStorage
-          const shapeData = object.toJSON();
-          (shapeData as Record<string, unknown>).objectId = objectId;
-          canvasObjects?.set(objectId, shapeData as unknown as Lson);
-        }
-      });
-    },
-    []
-  );
-
-  const reorderShapes = useMutation(({ storage }, objects: fabric.Object[]) => {
-    // Set flag to prevent renderCanvas from running
-    isReorderingRef.current = true;
-
-    const canvasObjects = storage.get("canvasObjects") as LiveMap<string, Lson>;
-
-    objects.forEach((object) => {
-      if (object && (object as fabric.Object & { objectId: string }).objectId) {
-        const objectWithId = object as fabric.Object & { objectId: string };
-        const { objectId } = objectWithId;
-        const shapeData = object.toJSON();
-        (shapeData as Record<string, unknown>).objectId = objectId;
-        canvasObjects?.set(objectId, shapeData as unknown as Lson);
-      }
-    });
-
-    // Reset flag after a short delay to allow the next render
-    setTimeout(() => {
-      isReorderingRef.current = false;
-    }, 100);
-  }, []);
-
   const [isCanvasInitialized, setIsCanvasInitialized] = useState(false);
-  const isReorderingRef = useRef(false);
 
   useEffect(() => {
     console.log("useEffect running, canvasRef:", canvasRef);
@@ -223,7 +182,6 @@ const Editor = () => {
       const canvas = initializeFabric({ canvasRef, fabricRef });
 
       canvas.on("mouse:down", (options) => {
-        console.log("mouse down");
         handleCanvasMouseDown({
           canvas,
           options,
@@ -235,15 +193,11 @@ const Editor = () => {
       });
 
       canvas.on("mouse:up", () => {
-        console.log("mouse up");
         handleCanvasMouseUp({
-          canvas,
           isDrawing,
           shapeRef,
           selectedShapeRef,
           syncShapeInStorage,
-          setActiveElement,
-          activeObjectRef,
         });
       });
 
@@ -270,6 +224,8 @@ const Editor = () => {
           options,
           isEditingRef,
           setElementAttributes,
+          setActiveElement,
+          selectedShapeRef,
         });
       });
 
@@ -278,6 +234,8 @@ const Editor = () => {
           options,
           isEditingRef,
           setElementAttributes,
+          setActiveElement,
+          selectedShapeRef,
         });
       });
 
@@ -368,6 +326,15 @@ const Editor = () => {
       />
     </div>
   );
-};
+}
 
-export default Editor;
+export default function Editor() {
+  const searchParams = useSearchParams();
+  const roomId = searchParams.get("roomId") || "default-room";
+
+  return (
+    <Room roomId={roomId}>
+      <EditorContent />
+    </Room>
+  );
+}

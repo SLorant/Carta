@@ -11,7 +11,6 @@ import {
   CanvasSelectionCreated,
   RenderCanvas,
 } from "@/types/type";
-import { defaultNavElement } from "@/constants";
 import { createSpecificShape } from "./shapes";
 
 // initialize fabric canvas
@@ -30,22 +29,12 @@ export const initializeFabric = ({
     throw new Error("Canvas element not found");
   }
 
-  console.log("Creating fabric canvas with element:", canvasElement);
-  console.log(
-    "Canvas dimensions:",
-    canvasElement.clientWidth,
-    "x",
-    canvasElement.clientHeight
-  );
-
   // create fabric canvas
   const canvas = new fabric.Canvas(canvasElement, {
     width: canvasElement.clientWidth || 800,
     height: canvasElement.clientHeight || 600,
     backgroundColor: "#333",
   });
-
-  console.log("Fabric canvas created successfully");
 
   // set canvas reference to fabricRef so we can use it later anywhere outside canvas listener
   fabricRef.current = canvas;
@@ -87,13 +76,8 @@ export const handleCanvasMouseDown = ({
 
   canvas.isDrawingMode = false;
 
-  // if target is the selected shape or active selection, set isDrawing to false
-  if (
-    target &&
-    (target.type === selectedShapeRef.current ||
-      target.type === "activeSelection" ||
-      selectedShapeRef.current === null) // Allow selection even when no shape tool is active
-  ) {
+  // if target exists (any existing object), prioritize selection over creation
+  if (target) {
     isDrawing.current = false;
 
     // set active object to target
@@ -102,12 +86,19 @@ export const handleCanvasMouseDown = ({
     // Also set the activeObjectRef to maintain the selection reference
     activeObjectRef.current = target;
 
+    // Exit creation mode when selecting an existing object
+    selectedShapeRef.current = null;
+
     /**
      * setCoords() is used to update the controls of the object
      * setCoords: http://fabricjs.com/docs/fabric.Object.html#setCoords
      */
     target.setCoords();
-  } else {
+  } else if (
+    selectedShapeRef.current &&
+    selectedShapeRef.current !== "select"
+  ) {
+    // Only create shapes if a shape tool is selected (not in selection mode)
     isDrawing.current = true;
 
     // create custom fabric object/shape and set it to shapeRef
@@ -127,6 +118,12 @@ export const handleCanvasMouseDown = ({
       (shapeRef.current as fabric.Object & { zIndex: number }).zIndex =
         newIndex;
     }
+  } else {
+    // In selection mode, clicking on empty area should clear selection
+    isDrawing.current = false;
+    canvas.discardActiveObject();
+    activeObjectRef.current = null;
+    canvas.renderAll();
   }
 };
 
@@ -200,13 +197,10 @@ export const handleCanvaseMouseMove = ({
 
 // handle mouse up event on canvas to stop drawing shapes
 export const handleCanvasMouseUp = ({
-  canvas,
   isDrawing,
   shapeRef,
-  activeObjectRef,
   selectedShapeRef,
   syncShapeInStorage,
-  setActiveElement,
 }: CanvasMouseUp) => {
   isDrawing.current = false;
   if (selectedShapeRef.current === "freeform") return;
@@ -214,25 +208,14 @@ export const handleCanvasMouseUp = ({
   // sync shape in storage as drawing is stopped
   syncShapeInStorage(shapeRef.current);
 
-  // Only clear activeObjectRef and selectedShapeRef if we were actually drawing a new shape
-  // If we were just moving/selecting an existing object, keep the selection
+  // Only clear shapeRef if we were actually drawing a new shape
   if (shapeRef.current) {
-    // We were creating a new shape, so clear everything
+    // We were creating a new shape, so clear the shape reference
+    // but keep the tool active for continuous creation
     shapeRef.current = null;
-    activeObjectRef.current = null;
-    selectedShapeRef.current = null;
-
-    // if canvas is not in drawing mode, set active element to default nav element after 700ms
-    if (!canvas.isDrawingMode) {
-      setTimeout(() => {
-        setActiveElement(defaultNavElement);
-      }, 700);
-    }
   } else {
-    // We were just interacting with existing objects, only clear shapeRef and selectedShapeRef
+    // We were just interacting with existing objects, only clear shapeRef
     shapeRef.current = null;
-    selectedShapeRef.current = null;
-    // Keep activeObjectRef.current so the selection remains visible
   }
 };
 
@@ -312,6 +295,8 @@ export const handleCanvasSelectionCreated = ({
   options,
   isEditingRef,
   setElementAttributes,
+  setActiveElement,
+  selectedShapeRef,
 }: CanvasSelectionCreated) => {
   // Reset editing state when a new selection is made
   isEditingRef.current = false;
@@ -319,12 +304,25 @@ export const handleCanvasSelectionCreated = ({
   // if no element is selected, return
   if (!options?.selected) return;
 
+  console.log(selectedShapeRef);
+
+  // Switch to select tool when an object is selected
+  // TODO make this work
+  /*   selectedShapeRef.current = null;
+  setActiveElement({
+    icon: "/assets/select.svg",
+    name: "Select",
+    value: "select",
+  }); */
+
   // get the selected element
   const selectedElement = options?.selected[0] as fabric.Object & {
     fontSize: string;
     fontFamily: string;
     fontWeight: string;
   };
+
+  console.log(selectedElement);
 
   // if only one element is selected, set element attributes
   if (selectedElement && options.selected.length === 1) {
@@ -355,8 +353,23 @@ export const handleCanvasSelectionUpdated = ({
   options,
   isEditingRef,
   setElementAttributes,
+  setActiveElement,
+  selectedShapeRef,
 }: CanvasSelectionCreated) => {
-  handleCanvasSelectionCreated({ options, isEditingRef, setElementAttributes });
+  selectedShapeRef.current = null;
+  setActiveElement({
+    icon: "/assets/select.svg",
+    name: "Select",
+    value: "select",
+  });
+
+  handleCanvasSelectionCreated({
+    options,
+    isEditingRef,
+    setElementAttributes,
+    setActiveElement,
+    selectedShapeRef,
+  });
 };
 
 // update element attributes when element is scaled
@@ -457,13 +470,17 @@ export const renderCanvas = ({
           }
 
           // Restore zIndex from storage if it exists
-          const storedZIndex = (objectData as unknown as Record<string, unknown>).zIndex as number | undefined;
+          const storedZIndex = (
+            objectData as unknown as Record<string, unknown>
+          ).zIndex as number | undefined;
           if (storedZIndex !== undefined) {
-            (enlivenedObj as fabric.Object & { zIndex: number }).zIndex = storedZIndex;
+            (enlivenedObj as fabric.Object & { zIndex: number }).zIndex =
+              storedZIndex;
           } else {
             // Assign z-index based on the current position if not in storage
             const currentIndex = fabricRef.current?.getObjects().length ?? 0;
-            (enlivenedObj as fabric.Object & { zIndex: number }).zIndex = currentIndex;
+            (enlivenedObj as fabric.Object & { zIndex: number }).zIndex =
+              currentIndex;
           }
 
           // add object to canvas

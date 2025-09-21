@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Recursive, Jaini } from "next/font/google";
 import "./globals.css";
+import { AuthProvider } from "@/components/AuthProvider";
 
 const recursive = Recursive({
   variable: "--font-recursive",
@@ -28,7 +29,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${recursive.variable} antialiased`}>
         <div className="z-0 relative w-screen min-h-screen h-full bg-background">
-          {children}
+          <AuthProvider>{children}</AuthProvider>
         </div>
       </body>
     </html>

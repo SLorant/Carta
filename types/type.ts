@@ -137,13 +137,10 @@ export type CanvasMouseMove = {
 };
 
 export type CanvasMouseUp = {
-  canvas: fabric.Canvas;
   isDrawing: React.MutableRefObject<boolean>;
   shapeRef: any;
-  activeObjectRef: React.MutableRefObject<fabric.Object | null>;
   selectedShapeRef: any;
   syncShapeInStorage: (shape: fabric.Object) => void;
-  setActiveElement: any;
 };
 
 export type CanvasObjectModified = {
@@ -160,6 +157,8 @@ export type CanvasSelectionCreated = {
   options: fabric.IEvent;
   isEditingRef: React.MutableRefObject<boolean>;
   setElementAttributes: React.Dispatch<React.SetStateAction<Attributes>>;
+  setActiveElement: React.Dispatch<React.SetStateAction<ActiveElement>>;
+  selectedShapeRef: React.MutableRefObject<string | null>;
 };
 
 export type CanvasObjectScaling = {

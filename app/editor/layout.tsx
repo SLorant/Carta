@@ -1,6 +1,5 @@
 import "../globals.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { Room } from "../Room";
 
 export const metadata = {
   title: "Figma Clone",
@@ -10,9 +9,9 @@ export const metadata = {
 
 const RootLayout = ({ children }: { children: React.ReactNode }) => (
   <div className="bg-primary-grey-200">
-    <Room>
-      <TooltipProvider>{children}</TooltipProvider>
-    </Room>
+    {/*     <Room> */}
+    <TooltipProvider>{children}</TooltipProvider>
+    {/*     </Room> */}
   </div>
 );
 
