@@ -11,6 +11,10 @@ button {
   font-family: jaini, sans-serif;
 }
 
+.normalfont {
+  font-family: recursive, sans-serif;
+}
+
 @layer utilities {
   .no-ring {
     @reference @apply outline-none ring-0 ring-offset-0 focus:ring-0 focus:ring-offset-0 focus-visible:ring-offset-0 !important;

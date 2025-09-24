@@ -3,6 +3,10 @@
 import React, { useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { RoomService, MapRoom } from "@/lib/roomService";
+import { Select } from "./inputs/Select";
+import { CancelButton, PrimaryButton } from "./general/Button";
+import Modal from "./general/Modal";
+import { TextInput } from "./inputs/TextInput";
 
 interface InviteModalProps {
   isOpen: boolean;
@@ -11,12 +15,12 @@ interface InviteModalProps {
   onInviteSent: () => void;
 }
 
-export function InviteModal({
+const InviteModal = ({
   isOpen,
   onClose,
   room,
   onInviteSent,
-}: InviteModalProps) {
+}: InviteModalProps) => {
   const { user } = useAuth();
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<"editor" | "viewer">("editor");
@@ -46,8 +50,7 @@ export function InviteModal({
         onInviteSent();
         setTimeout(() => {
           setMessage("");
-          onClose();
-        }, 2000);
+        }, 3000);
       } else {
         setMessage("Failed to send invitation. You may not have permission.");
       }
@@ -59,84 +62,63 @@ export function InviteModal({
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={`Invite to "${room.name}"`}
+      subtitle="Invite someone to collaborate on this map"
+    >
+      {message && (
+        <div
+          className={`mb-4 px-3 py-2 rounded-lg ${
+            message.includes("sent")
+              ? " text-green-400 border border-green-300"
+              : " text-red-400 border border-red-300"
+          }`}
+        >
+          {message}
+        </div>
+      )}
 
-      {/* Modal */}
-      <div className="relative bg-background rounded-lg p-8 w-full max-w-md mx-4 border border-gray-200">
-        <h2 className="text-2xl font-bold text-primary mb-2">
-          Invite to &quot;{room.name}&quot;
-        </h2>
-        <p className="text-gray-600 mb-6">
-          Invite someone to collaborate on this map
-        </p>
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <TextInput
+          id="email"
+          label="Email Address"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="Enter email address..."
+          required
+        />
 
-        {message && (
-          <div
-            className={`mb-4 p-3 rounded ${
-              message.includes("sent")
-                ? "bg-green-100 text-green-700 border border-green-300"
-                : "bg-red-100 text-red-700 border border-red-300"
-            }`}
-          >
-            {message}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium mb-2">
-              Email Address
-            </label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-              placeholder="Enter email address..."
-              required
-            />
-          </div>
-
-          <div>
-            <label htmlFor="role" className="block text-sm font-medium mb-2">
-              Permission Level
-            </label>
-            <select
-              id="role"
-              value={role}
-              onChange={(e) => setRole(e.target.value as "editor" | "viewer")}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-            >
-              <option value="editor">Editor - Can edit the map</option>
-              <option value="viewer">Viewer - Can only view the map</option>
-            </select>
-          </div>
-
-          <div className="flex gap-4 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
-              disabled={loading}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="flex-1 px-4 py-2 bg-primary text-background rounded-md hover:bg-primary/90 disabled:opacity-50"
-              disabled={loading || !email.trim()}
-            >
-              {loading ? "Sending..." : "Send Invite"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <Select
+          id="role"
+          value={role}
+          label="Permission Level"
+          onChange={(value) => setRole(value as "editor" | "viewer")}
+          options={[
+            {
+              value: "editor",
+              label: "Editor - Can edit the map",
+            },
+            {
+              value: "viewer",
+              label: "Viewer - Can only view the map",
+            },
+          ]}
+        />
+        <div className="flex gap-4 pt-2">
+          <CancelButton type="button" onClick={onClose} disabled={loading}>
+            Cancel
+          </CancelButton>
+          <PrimaryButton type="submit" disabled={loading || !email.trim()}>
+            {loading ? "Sending..." : "Send Invite"}
+          </PrimaryButton>
+        </div>
+      </form>
+    </Modal>
   );
-}
+};
+
+export default InviteModal;

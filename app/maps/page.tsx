@@ -6,7 +6,8 @@ import Image from "next/image";
 import { useAuth } from "@/components/AuthProvider";
 import { RoomService, MapRoom } from "@/lib/roomService";
 import { CreateRoomModal } from "@/components/CreateRoomModal";
-import { InviteModal } from "@/components/InviteModal";
+import InviteModal from "@/components/InviteModal";
+import { PrimaryButton } from "@/components/general/Button";
 
 const Maps = () => {
   const router = useRouter();
@@ -21,23 +22,26 @@ const Maps = () => {
       try {
         const userId = user.email || user.uid;
         const idToken = await user.getIdToken();
-        
+
         // Use the new method that fetches from both local and server
         const allUserRooms = await RoomService.getAllUserRooms(userId, idToken);
         setUserRooms(allUserRooms);
       } catch (error) {
         console.error("Error loading user rooms:", error);
-        
+
         // Fallback to local rooms only
         const roomsByUid = RoomService.getUserRooms(user.uid);
-        const roomsByEmail = user.email ? RoomService.getUserRoomsByEmail(user.email) : [];
-        
+        const roomsByEmail = user.email
+          ? RoomService.getUserRoomsByEmail(user.email)
+          : [];
+
         // Combine and deduplicate rooms
         const allUserRooms = [...roomsByUid, ...roomsByEmail];
-        const uniqueRooms = allUserRooms.filter((room, index, self) => 
-          index === self.findIndex(r => r.id === room.id)
+        const uniqueRooms = allUserRooms.filter(
+          (room, index, self) =>
+            index === self.findIndex((r) => r.id === room.id)
         );
-        
+
         setUserRooms(uniqueRooms);
       }
     }
@@ -96,8 +100,8 @@ const Maps = () => {
             "linear-gradient(180deg,rgba(0, 0, 0, 0.5) 0%, rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, 0) 100%)",
         }}
       ></div>
-      <div className="z-40 px-60 pt-28 relative w-screen h-full flex flex-col items-center justify-start">
-        <div className="absolute px-60 top-6 w-full flex justify-between text-secondary ">
+      <div className="z-40 px-72 pt-20 relative w-screen h-full flex flex-col items-center justify-start">
+        <div className="absolute px-72 top-6 w-full flex justify-between text-secondary ">
           <button
             className="text-4xl text-secondary cursor-pointer opacity-50"
             onClick={() => router.push("/")}
@@ -105,27 +109,27 @@ const Maps = () => {
             CARTA
           </button>
           <button
-            className="text-4xl cursor-pointer underline"
+            className="text-2xl cursor-pointer underline"
             onClick={() => router.push("/profile")}
           >
             {user.email}
           </button>
         </div>
         <div className="flex  items-center justify-between w-full ">
-          <h1 className="text-primary text-9xl">Your Maps</h1>
+          <h1 className="text-primary text-7xl">Your Maps</h1>
           <div className="flex gap-8 mb-8">
-            <button className="px-8 pt-1 pb-3 bg-secondary text-4xl rounded-lg text-background mt-20">
+            {/* <button className="px-8 pt-1 pb-3 bg-secondary text-4xl rounded-lg text-background mt-20">
               Import
-            </button>
-            <button
-              className="px-8 pt-1 pb-3 bg-primary text-4xl rounded-lg text-background mt-20"
+            </button> */}
+            <PrimaryButton
               onClick={() => setShowCreateModal(true)}
+              className="mt-20 !text-2xl w-32"
             >
               Create new
-            </button>
+            </PrimaryButton>
           </div>
         </div>
-        <div className="grid grid-cols-3 gap-10 w-full h-full mt-20">
+        <div className="grid grid-cols-3 gap-12 w-full h-full mt-8">
           {userRooms.map((room) => (
             <div
               key={room.id}
@@ -139,18 +143,22 @@ const Maps = () => {
                 fill
                 style={{ objectFit: "cover" }}
               />
-              
+
               {/* Invite button - only show for room owners */}
-              {user && RoomService.getUserPermission(room.id, user.email || user.uid) === "owner" && (
-                <button
-                  onClick={(e) => handleInviteClick(e, room)}
-                  className="absolute top-4 right-4 bg-primary text-background px-3 py-1 rounded-md text-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-primary/90"
-                  title="Invite collaborators"
-                >
-                  Invite
-                </button>
-              )}
-              
+              {user &&
+                RoomService.getUserPermission(
+                  room.id,
+                  user.email || user.uid
+                ) === "owner" && (
+                  <button
+                    onClick={(e) => handleInviteClick(e, room)}
+                    className="absolute top-4 right-4 bg-primary text-background px-3 py-1 rounded-md text-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-primary/90"
+                    title="Invite collaborators"
+                  >
+                    Invite
+                  </button>
+                )}
+
               <div
                 className="px-4 absolute bottom-0 bg-black/50 rounded-b-[20px] text-secondary left-0 w-full h-2/5 flex flex-col items-start justify-center"
                 style={{ textShadow: "1px 1px 2px black" }}
@@ -164,11 +172,20 @@ const Maps = () => {
                   )}
                 </div>
                 <p className="mb-4 pr-36 text-sm">{room.description}</p>
-                {user && RoomService.getUserPermission(room.id, user.email || user.uid) !== "owner" && (
-                  <p className="text-xs opacity-75">
-                    {RoomService.getUserPermission(room.id, user.email || user.uid) === "editor" ? "Can edit" : "View only"}
-                  </p>
-                )}
+                {user &&
+                  RoomService.getUserPermission(
+                    room.id,
+                    user.email || user.uid
+                  ) !== "owner" && (
+                    <p className="text-xs opacity-75">
+                      {RoomService.getUserPermission(
+                        room.id,
+                        user.email || user.uid
+                      ) === "editor"
+                        ? "Can edit"
+                        : "View only"}
+                    </p>
+                  )}
               </div>
             </div>
           ))}
