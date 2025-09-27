@@ -33,7 +33,8 @@ export const initializeFabric = ({
   const canvas = new fabric.Canvas(canvasElement, {
     width: canvasElement.clientWidth || 800,
     height: canvasElement.clientHeight || 600,
-    backgroundColor: "#333",
+    backgroundColor: "#224477",
+    fireMiddleClick: true,
   });
 
   // set canvas reference to fabricRef so we can use it later anywhere outside canvas listener
@@ -50,7 +51,25 @@ export const handleCanvasMouseDown = ({
   isDrawing,
   shapeRef,
   activeObjectRef,
+  isPanning,
+  lastPanPoint,
 }: CanvasMouseDown) => {
+  const evt = options.e as MouseEvent;
+
+  // Handle panning with middle mouse button
+  if (evt.button === 1) {
+    isPanning.current = true;
+    lastPanPoint.current = { x: evt.clientX, y: evt.clientY };
+    evt.preventDefault();
+    evt.stopPropagation();
+    // Change cursor to indicate panning mode
+    const canvasElement = canvas.getElement();
+    if (canvasElement) {
+      canvasElement.style.cursor = "grab";
+    }
+    return;
+  }
+
   // get pointer coordinates
   const pointer = canvas.getPointer(options.e);
 
@@ -135,7 +154,37 @@ export const handleCanvaseMouseMove = ({
   selectedShapeRef,
   shapeRef,
   syncShapeInStorage,
+  isPanning,
+  lastPanPoint,
 }: CanvasMouseMove) => {
+  const evt = options.e as MouseEvent;
+
+  // Handle panning if middle mouse button is held down
+  if (isPanning.current && lastPanPoint.current) {
+    const deltaX = evt.clientX - lastPanPoint.current.x;
+    const deltaY = evt.clientY - lastPanPoint.current.y;
+
+    // Get current viewport transform
+    const vpt = canvas.viewportTransform;
+    if (vpt) {
+      // Update the viewport transform to pan the canvas
+      vpt[4] += deltaX;
+      vpt[5] += deltaY;
+      canvas.requestRenderAll();
+
+      // Update coordinates for all objects to fix selection areas after panning
+      canvas.getObjects().forEach((obj) => {
+        obj.setCoords();
+      });
+    }
+
+    // Update last pan point
+    lastPanPoint.current = { x: evt.clientX, y: evt.clientY };
+    evt.preventDefault();
+    evt.stopPropagation();
+    return;
+  }
+
   // if selected shape is freeform, return
   if (!isDrawing.current) return;
   if (selectedShapeRef.current === "freeform") return;
@@ -201,7 +250,27 @@ export const handleCanvasMouseUp = ({
   shapeRef,
   selectedShapeRef,
   syncShapeInStorage,
+  isPanning,
+  lastPanPoint,
+  options,
+  canvas,
 }: CanvasMouseUp) => {
+  const evt = options.e as MouseEvent;
+
+  // Handle panning end for middle mouse button
+  if (evt.button === 1) {
+    isPanning.current = false;
+    lastPanPoint.current = null;
+    // Reset cursor
+    const canvasElement = canvas.getElement();
+    if (canvasElement) {
+      canvasElement.style.cursor = "default";
+    }
+    evt.preventDefault();
+    evt.stopPropagation();
+    return;
+  }
+
   isDrawing.current = false;
   if (selectedShapeRef.current === "freeform") return;
 
@@ -522,12 +591,12 @@ export const handleCanvasZoom = ({
   options: fabric.IEvent & { e: WheelEvent };
   canvas: fabric.Canvas;
 }) => {
-  const delta = options.e?.deltaY;
+  const delta = -options.e?.deltaY;
   let zoom = canvas.getZoom();
 
   // allow zooming to min 20% and max 100%
   const minZoom = 0.2;
-  const maxZoom = 1;
+  const maxZoom = 10;
   const zoomStep = 0.001;
 
   // calculate zoom based on mouse scroll wheel with min and max zoom

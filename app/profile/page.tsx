@@ -1,26 +1,29 @@
 "use client";
 
 import { auth } from "@/firebase.config";
-import { onAuthStateChanged, signOut } from "firebase/auth";
+import { signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
-import React, { useEffect } from "react";
+import React from "react";
+import { useUserProfile } from "@/hooks/useUserProfile";
+import ProfilePictureUpload from "@/components/ProfilePictureUpload";
 
 const Profile = () => {
   const router = useRouter();
-  const [userName, setUserName] = React.useState("");
+  const { 
+    user, 
+    profile, 
+    loading, 
+    uploading, 
+    updateProfilePicture, 
+    removeProfilePicture 
+  } = useUserProfile();
 
-  useEffect(() => {
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        // https://firebase.google.com/docs/reference/js/firebase.User
-        const uid = user.uid;
-        setUserName(user.email ?? "");
-        console.log("uid", uid);
-      } else {
-        console.log("user is logged out");
-      }
-    });
-  }, []);
+  // Redirect to home if not authenticated
+  React.useEffect(() => {
+    if (!loading && !user) {
+      router.push("/");
+    }
+  }, [loading, user, router]);
 
   const handleLogout = () => {
     signOut(auth)
@@ -33,6 +36,18 @@ const Profile = () => {
         console.log("Error signing out", error);
       });
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-4xl text-primary">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null; // Will redirect to home
+  }
 
   return (
     <div>
@@ -62,7 +77,7 @@ const Profile = () => {
             className="text-4xl cursor-pointer underline"
             onClick={() => router.push("/profile")}
           >
-            {userName}
+            {profile?.email || "Loading..."}
           </button>
         </div>
         <div className="flex  items-center justify-between w-full ">
@@ -78,10 +93,22 @@ const Profile = () => {
         </div>
         <div className="flex w-full h-full mt-20">
           <div className="w-full h-[300px] bg-black/15 rounded-[20px] border border-black flex justify-start items-center drop-shadow-lg">
-            <div className="ml-20 rounded-full bg-emerald-800 w-52 h-52"></div>
+            <div className="ml-20">
+              {loading ? (
+                <div className="w-52 h-52 rounded-full bg-gray-300 animate-pulse"></div>
+              ) : (
+                <ProfilePictureUpload
+                  currentPictureUrl={profile?.profilePictureUrl}
+                  onUpload={updateProfilePicture}
+                  onRemove={removeProfilePicture}
+                  uploading={uploading}
+                  size="lg"
+                />
+              )}
+            </div>
             <div className=" ml-10 flex flex-col text-secondary">
-              <h2 className="text-4xl underline"> {userName}</h2>
-              <p className="mt-2 text-lg">User bio and other info</p>
+              <h2 className="text-4xl underline"> {profile?.email || "Loading..."}</h2>
+              <p className="mt-2 text-lg">{profile?.bio || "User bio and other info"}</p>
             </div>
             <button
               className="absolute top-8 right-8 px-8 pt-1 pb-2 bg-secondary text-4xl rounded-lg text-background cursor-pointer"

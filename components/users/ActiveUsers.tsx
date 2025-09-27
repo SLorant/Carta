@@ -6,6 +6,7 @@ import { generateRandomName } from "@/lib/utils";
 
 import Avatar from "./Avatar";
 import { useOthers, useSelf } from "@liveblocks/react";
+import { useUserProfile } from "@/hooks/useUserProfile";
 
 const ActiveUsers = () => {
   /**
@@ -22,15 +23,22 @@ const ActiveUsers = () => {
    */
   const currentUser = useSelf();
 
+  // Get the current user's profile for profile picture
+  const { profile } = useUserProfile();
+
   // memoize the result of this function so that it doesn't change on every render but only when there are new users joining the room
   const memoizedUsers = useMemo(() => {
     const hasMoreUsers = others.length > 2;
-    console.log(others);
 
     return (
       <div className="flex items-center justify-center gap-1 z-50">
         {currentUser && (
-          <Avatar name="You" otherStyles="border-[3px] border-primary-green" />
+          <Avatar
+            name="You"
+            otherStyles="border-[3px] border-primary-green"
+            profilePictureUrl={profile?.profilePictureUrl}
+            userId={profile?.uid}
+          />
         )}
 
         {others.slice(0, 2).map(({ connectionId, id }) => (
@@ -48,7 +56,7 @@ const ActiveUsers = () => {
         )}
       </div>
     );
-  }, [others.length]);
+  }, [currentUser, others, profile?.profilePictureUrl, profile?.uid]);
 
   return memoizedUsers;
 };

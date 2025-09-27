@@ -125,6 +125,8 @@ export type CanvasMouseDown = {
   isDrawing: React.MutableRefObject<boolean>;
   shapeRef: React.MutableRefObject<fabric.Object | null>;
   activeObjectRef: React.MutableRefObject<fabric.Object | null>;
+  isPanning: React.MutableRefObject<boolean>;
+  lastPanPoint: React.MutableRefObject<{ x: number; y: number } | null>;
 };
 
 export type CanvasMouseMove = {
@@ -134,6 +136,8 @@ export type CanvasMouseMove = {
   selectedShapeRef: any;
   shapeRef: any;
   syncShapeInStorage: (shape: fabric.Object) => void;
+  isPanning: React.MutableRefObject<boolean>;
+  lastPanPoint: React.MutableRefObject<{ x: number; y: number } | null>;
 };
 
 export type CanvasMouseUp = {
@@ -141,6 +145,10 @@ export type CanvasMouseUp = {
   shapeRef: any;
   selectedShapeRef: any;
   syncShapeInStorage: (shape: fabric.Object) => void;
+  isPanning: React.MutableRefObject<boolean>;
+  lastPanPoint: React.MutableRefObject<{ x: number; y: number } | null>;
+  options: fabric.IEvent;
+  canvas: fabric.Canvas;
 };
 
 export type CanvasObjectModified = {

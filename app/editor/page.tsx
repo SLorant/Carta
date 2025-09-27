@@ -14,6 +14,7 @@ import {
   handleCanvasSelectionUpdated,
   handlePathCreated,
   handleResize,
+  handleCanvasZoom,
   initializeFabric,
   renderCanvas,
 } from "@/lib/canvas";
@@ -41,6 +42,8 @@ function EditorContent() {
   const activeObjectRef = useRef<fabric.Object | null>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const isEditingRef = useRef<boolean>(false);
+  const isPanning = useRef(false);
+  const lastPanPoint = useRef<{ x: number; y: number } | null>(null);
   const [elementAttributes, setElementAttributes] = useState<Attributes>({
     width: "",
     height: "",
@@ -182,6 +185,7 @@ function EditorContent() {
       const canvas = initializeFabric({ canvasRef, fabricRef });
 
       canvas.on("mouse:down", (options) => {
+        // Handle canvas interactions including panning with middle mouse button
         handleCanvasMouseDown({
           canvas,
           options,
@@ -189,19 +193,27 @@ function EditorContent() {
           shapeRef,
           selectedShapeRef,
           activeObjectRef,
+          isPanning,
+          lastPanPoint,
         });
       });
 
-      canvas.on("mouse:up", () => {
+      canvas.on("mouse:up", (options) => {
+        // Handle canvas mouse up including panning
         handleCanvasMouseUp({
           isDrawing,
           shapeRef,
           selectedShapeRef,
           syncShapeInStorage,
+          isPanning,
+          lastPanPoint,
+          options,
+          canvas,
         });
       });
 
       canvas.on("mouse:move", (options) => {
+        // Handle canvas mouse move including panning
         handleCanvaseMouseMove({
           canvas,
           options,
@@ -209,6 +221,8 @@ function EditorContent() {
           shapeRef,
           selectedShapeRef,
           syncShapeInStorage,
+          isPanning,
+          lastPanPoint,
         });
       });
 
@@ -252,6 +266,15 @@ function EditorContent() {
           syncShapeInStorage,
         });
       });
+
+      canvas.on("mouse:wheel", (options) => {
+        handleCanvasZoom({
+          options,
+          canvas,
+        });
+      });
+
+
 
       const handleWindowResize = () => {
         handleResize({ canvas });
