@@ -4,6 +4,10 @@ import {
   setDoc,
   updateDoc,
   serverTimestamp,
+  collection,
+  query,
+  where,
+  getDocs,
 } from "firebase/firestore";
 import {
   ref,
@@ -19,8 +23,8 @@ export interface UserProfile {
   displayName?: string;
   bio?: string;
   profilePictureUrl?: string;
-  createdAt: Date | any;
-  updatedAt: Date | any;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
@@ -47,6 +51,54 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
   } catch (error) {
     console.error("Error getting user profile:", error);
     throw error;
+  }
+}
+
+export async function getUserProfileByEmail(
+  email: string
+): Promise<UserProfile | null> {
+  try {
+    console.log("Getting user profile for email:", email);
+    const usersRef = collection(db, "users");
+    const q = query(usersRef, where("email", "==", email));
+    const querySnapshot = await getDocs(q);
+
+    if (!querySnapshot.empty) {
+      const doc = querySnapshot.docs[0];
+      const data = doc.data();
+      return {
+        uid: doc.id,
+        email: data.email,
+        displayName: data.displayName,
+        bio: data.bio,
+        profilePictureUrl: data.profilePictureUrl,
+        createdAt: data.createdAt?.toDate() || new Date(),
+        updatedAt: data.updatedAt?.toDate() || new Date(),
+      };
+    } else {
+      console.log("No user profile found for email:", email);
+      return null;
+    }
+  } catch (error) {
+    console.error("Error getting user profile by email:", error);
+    throw error;
+  }
+}
+
+// Helper function to get user profile by either UID or email
+export async function getUserProfileByIdOrEmail(
+  identifier: string
+): Promise<UserProfile | null> {
+  try {
+    // Check if identifier looks like an email
+    if (identifier.includes("@")) {
+      return await getUserProfileByEmail(identifier);
+    } else {
+      return await getUserProfile(identifier);
+    }
+  } catch (error) {
+    console.error("Error getting user profile by identifier:", error);
+    return null;
   }
 }
 

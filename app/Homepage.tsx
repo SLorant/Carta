@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import Modal from "./Modal";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/firebase.config";
+import { PrimaryButton } from "@/components/general/Button";
 
 export const Card = ({ image, title, description }) => {
   return (
@@ -13,7 +14,7 @@ export const Card = ({ image, title, description }) => {
         alt=""
       />
       <div
-        className="absolute bottom-0 bg-black/50 rounded-b-[20px] text-secondary left-0 w-full h-1/3 flex flex-col items-center justify-center"
+        className="absolute bottom-0 bg-black/50 rounded-b-[20px] text-secondary left-0 w-full h-5/12 flex flex-col items-center justify-center"
         style={{ textShadow: "1px 1px 2px black" }}
       >
         <h2 className="text-4xl underline mb-2">{title}</h2>
@@ -78,7 +79,7 @@ const Homepage = () => {
         <div className="absolute top-6 right-20 text-secondary flex gap-10">
           {userName ? (
             <button
-              className="text-4xl cursor-pointer underline"
+              className="text-3xl cursor-pointer underline"
               onClick={() => router.push("/maps")}
             >
               {userName}
@@ -86,13 +87,13 @@ const Homepage = () => {
           ) : (
             <>
               <button
-                className="text-4xl text-primary cursor-pointer"
+                className="text-3xl text-primary cursor-pointer"
                 onClick={() => openModal("login")}
               >
                 Log in
               </button>
               <button
-                className="text-4xl cursor-pointer"
+                className="text-3xl cursor-pointer"
                 onClick={() => openModal("register")}
               >
                 Register
@@ -103,7 +104,7 @@ const Homepage = () => {
         <h1 className="text-primary text-9xl">CARTA</h1>
         <h2 className="text-secondary text-6xl">Create maps together</h2>
         <button
-          className="px-8 pt-1 pb-3 bg-primary text-4xl rounded-lg text-background mt-20 cursor-pointer"
+          className="px-8 pt-2 pb-3 bg-primary text-3xl rounded-lg text-background mt-20 cursor-pointer hover:bg-secondary duration-200"
           onClick={() =>
             userName ? router.push("/maps") : setModalType("login")
           }
@@ -113,18 +114,18 @@ const Homepage = () => {
         <div className="h-1/3 flex justify-center gap-20 w-full mb-16 mt-20">
           <Card
             image="/map1.jpg"
-            title="Best feature"
-            description="Small description of the feature, what it does, why it is the best"
+            title="Real-time Collaboration"
+            description="Work together with your team in real-time. See live cursors, instant updates, and collaborate seamlessly"
           />
           <Card
             image="/map2.jpg"
-            title="Best feature"
-            description="Small description of the feature, what it does, why it is the best"
+            title="Interactive Map Editing"
+            description="Create stunning maps with powerful drawing tools, customizable shapes, layers, and more"
           />
           <Card
             image="/map3.png"
-            title="Best feature"
-            description="Small description of the feature, what it does, why it is the best"
+            title="Comments & Reactions"
+            description="Add comments, react to them, and discuss ideas directly on your maps with threaded conversations"
           />
         </div>
       </div>

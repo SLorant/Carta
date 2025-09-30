@@ -221,6 +221,27 @@ export class RoomService {
     return allRooms.find((room) => room.id === roomId) || null;
   }
 
+  static updateRoom(
+    roomId: string,
+    updates: { name?: string; description?: string }
+  ): MapRoom | null {
+    const allRooms = this.getAllRooms();
+    const roomIndex = allRooms.findIndex((room) => room.id === roomId);
+
+    if (roomIndex === -1) return null;
+
+    // Update the room with new values
+    const updatedRoom = {
+      ...allRooms[roomIndex],
+      ...updates,
+    };
+
+    allRooms[roomIndex] = updatedRoom;
+    localStorage.setItem(this.ROOMS_KEY, JSON.stringify(allRooms));
+
+    return updatedRoom;
+  }
+
   static getUserPermission(
     roomId: string,
     userId: string

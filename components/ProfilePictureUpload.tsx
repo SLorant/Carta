@@ -114,13 +114,12 @@ const ProfilePictureUpload: React.FC<ProfilePictureUploadProps> = ({
             src={`${currentPictureUrl}`}
             alt="Profile picture"
             fill
-            className="object-cover"
+            className="object-cover rounded-full"
           />
         ) : (
-          <div className="text-center text-gray-500">
+          <div className="text-center text-gray-400">
             {size === "lg" && (
               <>
-                <div className="text-4xl mb-2">📷</div>
                 <div className="text-sm">
                   {uploading ? "Uploading..." : "Click or drag to upload"}
                 </div>
@@ -141,10 +140,10 @@ const ProfilePictureUpload: React.FC<ProfilePictureUploadProps> = ({
       {currentPictureUrl && onRemove && !uploading && (
         <button
           onClick={handleRemove}
-          className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs hover:bg-red-600 transition-colors"
+          className="absolute -top-2 -right-2 w-6 h-6 bg-secondary text-black rounded-full text-sm hover:bg-white cursor-pointer transition-colors"
           title="Remove profile picture"
         >
-          ×
+          <span className="mt-4">X</span>
         </button>
       )}
 

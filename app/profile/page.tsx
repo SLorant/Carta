@@ -6,16 +6,19 @@ import { useRouter } from "next/navigation";
 import React from "react";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import ProfilePictureUpload from "@/components/ProfilePictureUpload";
+import BackgroundBlur from "@/components/BackgroundBlur";
+import Header from "@/components/Header";
+import { CancelButton, PrimaryButton } from "@/components/general/Button";
 
 const Profile = () => {
   const router = useRouter();
-  const { 
-    user, 
-    profile, 
-    loading, 
-    uploading, 
-    updateProfilePicture, 
-    removeProfilePicture 
+  const {
+    user,
+    profile,
+    loading,
+    uploading,
+    updateProfilePicture,
+    removeProfilePicture,
   } = useUserProfile();
 
   // Redirect to home if not authenticated
@@ -51,44 +54,18 @@ const Profile = () => {
 
   return (
     <div>
-      <div
-        className="absolute top-0 left-0 z-20 w-screen min-h-screen h-full"
-        style={{
-          background:
-            "linear-gradient(90deg,rgba(0, 0, 0, 0.5) 0%, rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, 0.5) 100%)",
-        }}
-      ></div>
-      <div
-        className="absolute top-0 left-0 z-20 w-screen min-h-screen h-full"
-        style={{
-          background:
-            "linear-gradient(180deg,rgba(0, 0, 0, 0.5) 0%, rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, 0) 100%)",
-        }}
-      ></div>
-      <div className="z-40 px-60 pt-28 relative w-screen h-full flex flex-col items-center justify-start">
-        <div className="absolute px-60 top-6 w-full flex justify-between text-secondary ">
-          <button
-            className="text-4xl text-secondary cursor-pointer opacity-50"
-            onClick={() => router.push("/")}
-          >
-            CARTA
-          </button>
-          <button
-            className="text-4xl cursor-pointer underline"
-            onClick={() => router.push("/profile")}
-          >
-            {profile?.email || "Loading..."}
-          </button>
-        </div>
+      <BackgroundBlur />
+      <div className="z-40 px-72 pt-28 relative w-screen h-full flex flex-col items-center justify-start">
+        <Header user={user} />
         <div className="flex  items-center justify-between w-full ">
-          <h1 className="text-primary text-9xl">Profile</h1>
+          <h1 className="text-primary text-7xl">Profile</h1>
           <div className="flex gap-8 mb-8">
-            <button
-              className="px-8 pt-1 pb-3 bg-primary text-4xl rounded-lg text-background mt-20 cursor-pointer"
+            <PrimaryButton
+              className="mt-16 !text-2xl "
               onClick={() => router.push("/maps")}
             >
               Go to your Maps
-            </button>
+            </PrimaryButton>
           </div>
         </div>
         <div className="flex w-full h-full mt-20">
@@ -107,15 +84,19 @@ const Profile = () => {
               )}
             </div>
             <div className=" ml-10 flex flex-col text-secondary">
-              <h2 className="text-4xl underline"> {profile?.email || "Loading..."}</h2>
-              <p className="mt-2 text-lg">{profile?.bio || "User bio and other info"}</p>
+              <h2 className="text-4xl underline">
+                {profile?.email || "Loading..."}
+              </h2>
+              <p className="mt-2 text-lg">
+                {profile?.bio || "User bio and other info"}
+              </p>
             </div>
-            <button
-              className="absolute top-8 right-8 px-8 pt-1 pb-2 bg-secondary text-4xl rounded-lg text-background cursor-pointer"
+            <CancelButton
+              className="absolute bottom-8 right-8  text-4xl "
               onClick={handleLogout}
             >
               Logout
-            </button>
+            </CancelButton>
           </div>
         </div>
       </div>

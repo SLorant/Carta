@@ -6,8 +6,10 @@ import Color from "./settings/Color";
 import Text from "./settings/Text";
 import Export from "./settings/Export";
 import Opacity from "./settings/Opacity";
+import BrushSettings from "./settings/BrushSettings";
 import { RightSidebarProps } from "@/types/type";
 import { modifyShape } from "@/lib/shapes";
+import { updateBrushSettings } from "@/lib/canvas";
 import { fabric } from "fabric";
 
 const RightSideBar = ({
@@ -18,6 +20,7 @@ const RightSideBar = ({
   isEditingRef,
   activeObjectRef,
   syncShapeInStorage,
+  selectedShapeRef,
 }: RightSidebarProps) => {
   const [openSections, setOpenSections] = useState([false, false]);
 
@@ -28,17 +31,48 @@ const RightSideBar = ({
     if (!isEditingRef.current) {
       isEditingRef.current = true;
     }
-    setElementAttributes((prev) => ({
-      ...prev,
-      [property]: value,
-    }));
-    modifyShape({
-      canvas: fabricRef.current as fabric.Canvas,
-      property,
-      value,
-      activeObjectRef,
-      syncShapeInStorage,
+    setElementAttributes((prev) => {
+      const newAttributes = {
+        ...prev,
+        [property]: value,
+      };
+
+      // If it's a brush property and we're in freeform mode, update brush settings
+      if (
+        (property.startsWith("brush") &&
+          selectedShapeRef.current === "freeform") ||
+        selectedShapeRef.current === "freeform"
+      ) {
+        const brushSettings = {
+          width: parseInt(property === "brushWidth" ? value : prev.brushWidth),
+          color: property === "brushColor" ? value : prev.brushColor,
+          texture: property === "brushTexture" ? value : prev.brushTexture,
+          roughness: parseInt(
+            property === "brushRoughness" ? value : prev.brushRoughness
+          ),
+        };
+
+        if (fabricRef.current) {
+          updateBrushSettings(fabricRef.current, brushSettings);
+        }
+      }
+
+      return newAttributes;
     });
+
+    // Only call modifyShape for non-brush properties or when not in freeform mode
+    if (
+      !property.startsWith("brush") ||
+      selectedShapeRef.current !== "freeform"
+    ) {
+      modifyShape({
+        canvas: fabricRef.current as fabric.Canvas,
+        property,
+        value,
+        activeObjectRef,
+        syncShapeInStorage,
+      });
+    }
   };
 
   return (
@@ -82,6 +116,15 @@ const RightSideBar = ({
           isEditingRef={isEditingRef}
           handleInputChange={handleInputChange}
         />
+        {selectedShapeRef.current === "freeform" && (
+          <BrushSettings
+            brushWidth={elementAttributes.brushWidth}
+            brushColor={elementAttributes.brushColor}
+            brushTexture={elementAttributes.brushTexture}
+            brushRoughness={elementAttributes.brushRoughness}
+            handleInputChange={handleInputChange}
+          />
+        )}
         <Text
           fontFamily={elementAttributes.fontFamily}
           fontSize={elementAttributes.fontSize}

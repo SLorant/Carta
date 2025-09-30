@@ -53,6 +53,10 @@ function EditorContent() {
     fill: "#aabbcc",
     stroke: "#aabbcc",
     opacity: "1",
+    brushWidth: "20",
+    brushColor: "#ffffff",
+    brushTexture: "continental",
+    brushRoughness: "75",
   });
 
   const [activeElement, setActiveElement] = useState<ActiveElement>({
@@ -195,6 +199,12 @@ function EditorContent() {
           activeObjectRef,
           isPanning,
           lastPanPoint,
+          brushSettings: {
+            width: parseInt(elementAttributes.brushWidth),
+            color: elementAttributes.brushColor,
+            texture: elementAttributes.brushTexture,
+            roughness: parseInt(elementAttributes.brushRoughness),
+          },
         });
       });
 
@@ -274,8 +284,6 @@ function EditorContent() {
         });
       });
 
-
-
       const handleWindowResize = () => {
         handleResize({ canvas });
       };
@@ -309,7 +317,16 @@ function EditorContent() {
         fabricRef.current = null;
       }
     };
-  }, [deleteShapeFromStorage, redo, syncShapeInStorage, undo]);
+  }, [
+    deleteShapeFromStorage,
+    redo,
+    syncShapeInStorage,
+    undo,
+    /*     elementAttributes.brushWidth,
+    elementAttributes.brushColor,
+    elementAttributes.brushTexture,
+    elementAttributes.brushRoughness, */
+  ]);
 
   useEffect(() => {
     if (isCanvasInitialized && fabricRef.current) {
@@ -346,6 +363,7 @@ function EditorContent() {
         setElementAttributes={setElementAttributes}
         syncShapeInStorage={syncShapeInStorage}
         allShapes={Array.from(canvasObjects)}
+        selectedShapeRef={selectedShapeRef}
       />
     </div>
   );

@@ -16,7 +16,8 @@ type Props = {
 
 const Avatar = ({ name, otherStyles, profilePictureUrl, userId }: Props) => {
   // Use Firebase profile picture if available, otherwise fallback to Liveblocks avatar
-  const avatarSrc = profilePictureUrl || 
+  const avatarSrc =
+    profilePictureUrl ||
     `https://liveblocks.io/avatars/avatar-${Math.floor(
       Math.random() * 30
     )}.png`;
@@ -27,7 +28,7 @@ const Avatar = ({ name, otherStyles, profilePictureUrl, userId }: Props) => {
         <Tooltip>
           <TooltipTrigger>
             <div
-              className={`relative z-50 h-9 w-9 rounded-full ${otherStyles}`}
+              className={`relative z-50 h-10 w-10 rounded-full ${otherStyles}`}
               data-tooltip={name}
             >
               <Image
@@ -38,7 +39,7 @@ const Avatar = ({ name, otherStyles, profilePictureUrl, userId }: Props) => {
               />
             </div>
           </TooltipTrigger>
-          <TooltipContent className="border-none bg-primary text-black px-2.5 py-1.5 text-xs">
+          <TooltipContent className="border-none bg-primary text-black text-shadow-none px-2.5 py-1.5 text-xs">
             {name}
           </TooltipContent>
         </Tooltip>

@@ -202,7 +202,18 @@ const Live = ({ canvasRef, undo, redo }: Props) => {
             cursor: cursorState.mode === CursorMode.Chat ? "none" : "auto",
           }}
         >
-          <canvas ref={canvasRef} className="z-40 w-full h-full" />
+          <div className="relative w-full h-full">
+            <canvas ref={canvasRef} className="z-40 w-full h-full" />
+            <div
+              className="absolute top-0 left-0 w-full h-full z-50 opacity-20 pointer-events-none"
+              style={{
+                backgroundImage: "url('/map6.png')",
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+                mixBlendMode: "multiply",
+              }}
+            />
+          </div>
 
           {reaction.map((reaction) => (
             <FlyingReaction

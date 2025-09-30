@@ -56,6 +56,10 @@ export type Attributes = {
   fill: string;
   stroke: string;
   opacity: string;
+  brushWidth: string;
+  brushColor: string;
+  brushTexture: string;
+  brushRoughness: string;
 };
 
 export type ActiveElement = {
@@ -97,6 +101,7 @@ export type RightSidebarProps = {
   activeObjectRef: React.MutableRefObject<fabric.Object | null>;
   isEditingRef: React.MutableRefObject<boolean>;
   syncShapeInStorage: (obj: fabric.Object) => void;
+  selectedShapeRef: React.MutableRefObject<string | null>;
 };
 
 export type NavbarProps = {
@@ -127,6 +132,12 @@ export type CanvasMouseDown = {
   activeObjectRef: React.MutableRefObject<fabric.Object | null>;
   isPanning: React.MutableRefObject<boolean>;
   lastPanPoint: React.MutableRefObject<{ x: number; y: number } | null>;
+  brushSettings?: {
+    width: number;
+    color: string;
+    texture: string;
+    roughness: number;
+  };
 };
 
 export type CanvasMouseMove = {

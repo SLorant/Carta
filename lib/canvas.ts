@@ -13,6 +13,63 @@ import {
 } from "@/types/type";
 import { createSpecificShape } from "./shapes";
 
+// Configure free drawing brush with advanced settings for continent-like drawing
+export const configureFreeDrawingBrush = (
+  canvas: fabric.Canvas,
+  settings: {
+    width: number;
+    color: string;
+    texture: string;
+    roughness: number;
+  }
+) => {
+  const brush = canvas.freeDrawingBrush;
+
+  // Set basic brush properties
+  brush.width = settings.width;
+  brush.color = settings.color;
+
+  // Configure texture and roughness based on settings
+  switch (settings.texture) {
+    case "smooth":
+      brush.decimate = 5; // Less decimation for smoother lines
+      break;
+    case "rough":
+      brush.decimate = 15; // More decimation for rougher lines
+      break;
+    case "textured":
+      brush.decimate = 10; // Medium decimation
+      break;
+    case "continental":
+      brush.decimate = Math.floor(20 + (settings.roughness / 100) * 30); // Variable decimation based on roughness
+      // Create a custom pattern brush for continental effect
+      createContinentalBrush(canvas, settings);
+      break;
+    default:
+      brush.decimate = 10;
+  }
+};
+
+// Create a special continental-style brush that creates organic, coastline-like strokes
+const createContinentalBrush = (
+  canvas: fabric.Canvas,
+  settings: { width: number; color: string; roughness: number }
+) => {
+  // For continental effect, we'll use the pencil brush with organic variations
+  const brush = canvas.freeDrawingBrush;
+
+  // Add some organic variation to the drawing based on roughness
+  const baseDecimate = 15;
+  const roughnessVariation = (settings.roughness / 100) * 20;
+  brush.decimate = Math.floor(baseDecimate + roughnessVariation);
+
+  // Vary the width slightly for more organic feel
+  if (settings.roughness > 50) {
+    brush.width =
+      settings.width + Math.random() * (settings.roughness / 100) * 5;
+  }
+};
+
 // initialize fabric canvas
 export const initializeFabric = ({
   fabricRef,
@@ -53,6 +110,7 @@ export const handleCanvasMouseDown = ({
   activeObjectRef,
   isPanning,
   lastPanPoint,
+  brushSettings,
 }: CanvasMouseDown) => {
   const evt = options.e as MouseEvent;
 
@@ -89,7 +147,16 @@ export const handleCanvasMouseDown = ({
   if (selectedShapeRef.current === "freeform") {
     isDrawing.current = true;
     canvas.isDrawingMode = true;
-    canvas.freeDrawingBrush.width = 5;
+
+    // Configure brush based on settings received as parameters
+    const defaultBrushSettings = {
+      width: 20,
+      color: "#ffffff",
+      texture: "continental",
+      roughness: 75,
+    };
+
+    configureFreeDrawingBrush(canvas, brushSettings || defaultBrushSettings);
     return;
   }
 
@@ -413,6 +480,10 @@ export const handleCanvasSelectionCreated = ({
       fontFamily: selectedElement?.fontFamily || "",
       fontWeight: selectedElement?.fontWeight || "",
       opacity: selectedElement?.opacity?.toString() || "1",
+      brushWidth: "20",
+      brushColor: "#ffffff",
+      brushTexture: "continental",
+      brushRoughness: "75",
     });
   }
 };
@@ -608,4 +679,19 @@ export const handleCanvasZoom = ({
 
   options.e.preventDefault();
   options.e.stopPropagation();
+};
+
+// Update brush settings when they change
+export const updateBrushSettings = (
+  canvas: fabric.Canvas,
+  settings: {
+    width: number;
+    color: string;
+    texture: string;
+    roughness: number;
+  }
+) => {
+  if (canvas.isDrawingMode) {
+    configureFreeDrawingBrush(canvas, settings);
+  }
 };

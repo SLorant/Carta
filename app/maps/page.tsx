@@ -7,7 +7,11 @@ import { useAuth } from "@/components/AuthProvider";
 import { RoomService, MapRoom } from "@/lib/roomService";
 import { CreateRoomModal } from "@/components/CreateRoomModal";
 import InviteModal from "@/components/InviteModal";
+import { EditMapModal } from "@/components/EditMapModal";
 import { PrimaryButton } from "@/components/general/Button";
+import BackgroundBlur from "@/components/BackgroundBlur";
+import Header from "@/components/Header";
+import RoomUsers from "@/components/users/RoomUsers";
 
 const Maps = () => {
   const router = useRouter();
@@ -15,6 +19,7 @@ const Maps = () => {
   const [userRooms, setUserRooms] = useState<MapRoom[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState<MapRoom | null>(null);
 
   const loadUserRooms = React.useCallback(async () => {
@@ -67,8 +72,18 @@ const Maps = () => {
     setShowInviteModal(true);
   };
 
+  const handleEditClick = (e: React.MouseEvent, room: MapRoom) => {
+    e.stopPropagation(); // Prevent triggering the room click
+    setSelectedRoom(room);
+    setShowEditModal(true);
+  };
+
   const handleInviteSent = () => {
     loadUserRooms(); // Refresh the rooms list
+  };
+
+  const handleMapUpdated = async () => {
+    await loadUserRooms(); // Refresh the rooms list
   };
 
   if (loading) {
@@ -86,44 +101,15 @@ const Maps = () => {
 
   return (
     <div>
-      <div
-        className="absolute top-0 left-0 z-20 w-screen min-h-screen h-full"
-        style={{
-          background:
-            "linear-gradient(90deg,rgba(0, 0, 0, 0.5) 0%, rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, 0.5) 100%)",
-        }}
-      ></div>
-      <div
-        className="absolute top-0 left-0 z-20 w-screen min-h-screen h-full"
-        style={{
-          background:
-            "linear-gradient(180deg,rgba(0, 0, 0, 0.5) 0%, rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, 0) 100%)",
-        }}
-      ></div>
+      <BackgroundBlur />
       <div className="z-40 px-72 pt-20 relative w-screen h-full flex flex-col items-center justify-start">
-        <div className="absolute px-72 top-6 w-full flex justify-between text-secondary ">
-          <button
-            className="text-4xl text-secondary cursor-pointer opacity-50"
-            onClick={() => router.push("/")}
-          >
-            CARTA
-          </button>
-          <button
-            className="text-2xl cursor-pointer underline"
-            onClick={() => router.push("/profile")}
-          >
-            {user.email}
-          </button>
-        </div>
+        <Header user={user} />
         <div className="flex  items-center justify-between w-full ">
           <h1 className="text-primary text-7xl">Your Maps</h1>
           <div className="flex gap-8 mb-8">
-            {/* <button className="px-8 pt-1 pb-3 bg-secondary text-4xl rounded-lg text-background mt-20">
-              Import
-            </button> */}
             <PrimaryButton
               onClick={() => setShowCreateModal(true)}
-              className="mt-20 !text-2xl w-32"
+              className="mt-16 !text-2xl w-32"
             >
               Create new
             </PrimaryButton>
@@ -133,15 +119,15 @@ const Maps = () => {
           {userRooms.map((room) => (
             <div
               key={room.id}
-              className="relative w-[350px] h-[300px] rounded-[20px] drop-shadow-lg cursor-pointer group"
-              onClick={() => handleRoomClick(room.id)}
+              className="relative w-[350px] h-[300px] rounded-[20px] drop-shadow-lg group"
             >
               <Image
                 src={room.imageUrl}
-                className="absolute w-full h-full top-0 left-0 opacity-70 rounded-[20px] brightness-75"
+                className="absolute w-full h-full top-0 left-0 opacity-70 rounded-[20px] cursor-pointer brightness-75"
                 alt={room.name}
                 fill
                 style={{ objectFit: "cover" }}
+                onClick={() => handleRoomClick(room.id)}
               />
 
               {/* Invite button - only show for room owners */}
@@ -150,26 +136,41 @@ const Maps = () => {
                   room.id,
                   user.email || user.uid
                 ) === "owner" && (
-                  <button
-                    onClick={(e) => handleInviteClick(e, room)}
-                    className="absolute top-4 right-4 bg-primary text-background px-3 py-1 rounded-md text-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-primary/90"
-                    title="Invite collaborators"
-                  >
-                    Invite
-                  </button>
+                  <div className="absolute right-2 top-2 gap-1 grid place-items-center grid-cols-2 py-2 mt-2 rounded-xl px-2 duration-300 bg-black/50 group-hover:opacity-100 opacity-0">
+                    <button
+                      onClick={(e) => handleInviteClick(e, room)}
+                      className="cursor-pointer bg-primary text-background px-3 py-1 rounded-md text-sm transition-opacity hover:bg-secondary"
+                      title="Invite collaborators"
+                    >
+                      Invite
+                    </button>
+                    <button
+                      onClick={(e) => handleEditClick(e, room)}
+                      className="cursor-pointer bg-primary text-background px-3 py-1 rounded-md text-sm transition-opacity hover:bg-secondary"
+                    >
+                      Edit
+                    </button>
+                  </div>
                 )}
 
               <div
                 className="px-4 absolute bottom-0 bg-black/50 rounded-b-[20px] text-secondary left-0 w-full h-2/5 flex flex-col items-start justify-center"
                 style={{ textShadow: "1px 1px 2px black" }}
               >
-                <div className="flex items-center gap-2 mb-2">
-                  <h2 className="text-4xl underline">{room.name}</h2>
-                  {room.permissions.length > 1 && (
-                    <span className="text-xs bg-primary text-background px-2 py-1 rounded-full">
-                      Shared
-                    </span>
-                  )}
+                <div className="flex items-center gap-3 mb-2">
+                  <h2
+                    className="text-4xl underline cursor-pointer"
+                    onClick={() => handleRoomClick(room.id)}
+                  >
+                    {room.name}
+                  </h2>
+                </div>
+
+                <div className="absolute right-2 top-0 gap-2 grid place-items-center grid-cols-2 py-2 mt-2 rounded-xl px-2 bg-black/50 ">
+                  <RoomUsers
+                    room={room}
+                    onClick={(e) => handleInviteClick(e, room)}
+                  />
                 </div>
                 <p className="mb-4 pr-36 text-sm">{room.description}</p>
                 {user &&
@@ -220,6 +221,18 @@ const Maps = () => {
           }}
           room={selectedRoom}
           onInviteSent={handleInviteSent}
+        />
+      )}
+
+      {selectedRoom && (
+        <EditMapModal
+          isOpen={showEditModal}
+          onClose={() => {
+            setShowEditModal(false);
+            setSelectedRoom(null);
+          }}
+          room={selectedRoom}
+          onMapUpdated={handleMapUpdated}
         />
       )}
     </div>
