@@ -1,6 +1,14 @@
 @import "tailwindcss";
 @import "@liveblocks/react-ui/styles.css";
 
+@font-face {
+  font-family: "Enchanted Land";
+  src: url("/fonts/Enchanted-Land.otf") format("opentype");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 * {
   font-family: recursive, sans-serif;
 }

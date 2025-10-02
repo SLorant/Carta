@@ -7,7 +7,6 @@ import {
   ThreadMetadata,
   useEditThreadMetadata,
   useThreads,
-  useUser,
 } from "@/liveblocks.config";
 import { useMaxZIndex } from "@/lib/useMaxZIndex";
 
@@ -79,10 +78,6 @@ const OverlayThread = ({ thread, maxZIndex }: OverlayThreadProps) => {
     });
   }, [thread, editThreadMetadata, maxZIndex]);
 
-  /*  if (isLoading) {
-    return null;
-  }
- */
   return (
     <div
       ref={threadRef}

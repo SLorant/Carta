@@ -4,6 +4,8 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
 } from "firebase/auth";
+import { TextInput } from "@/components/inputs/TextInput";
+import { PrimaryButton } from "@/components/general/Button";
 
 // TODO: types
 const Modal = ({ type, onClose, setModal, router }) => {
@@ -52,44 +54,35 @@ const Modal = ({ type, onClose, setModal, router }) => {
         <h2 className="text-center text-5xl text-primary mb-4 pt-8">
           {type === "login" ? "Log in" : "Register"}
         </h2>
-        <form className="flex flex-col gap-0 px-8">
-          <label className="text-secondary text-lg">Email</label>
-          <input
+        <form className="flex flex-col gap-6 px-8">
+          <TextInput
+            label="Email"
             type="email"
             placeholder="Email"
-            className="p-2 border rounded-lg outline-none bg-secondary text-background mb-6"
             onChange={(e) => setEmail(e.target.value)}
           />
-          <label className="text-secondary text-lg">Password</label>
-          <input
-            type="password"
+          <TextInput
+            label="Password"
             placeholder="Password"
-            className="p-2 border rounded-lg outline-none bg-secondary text-background mb-6"
             onChange={(e) => setPassword(e.target.value)}
+            type="password"
           />
           {type === "register" && (
-            <>
-              <label className="text-secondary text-lg">Confirm Password</label>
-              <input
-                type="password"
-                placeholder="Confirm Password"
-                className="p-2 border rounded-lg outline-none bg-secondary text-background mb-6"
-              />
-            </>
+            <TextInput
+              label="Confirm Password"
+              placeholder="Confirm Password"
+              onChange={(e) => setPassword(e.target.value)}
+              type="password"
+            />
           )}
           <div className="flex flex-col items-center justify-center">
-            <button
+            <PrimaryButton
               type="submit"
-              className="mt-4 bg-primary text-background p-2 rounded-lg h-11 flex justify-center items-center w-36 cursor-pointer"
+              className="w-24 !text-2xl"
               onClick={type === "login" ? onLogin : onSubmit}
             >
-              <p
-                className="mb-1 text-3xl"
-                style={{ fontFamily: "jaini, sans-serif" }}
-              >
-                {type === "login" ? "Login" : "Register"}
-              </p>
-            </button>
+              {type === "login" ? "Login" : "Register"}
+            </PrimaryButton>
           </div>
         </form>
         <div className="border border-gray-500 w-full my-8"></div>
@@ -103,7 +96,7 @@ const Modal = ({ type, onClose, setModal, router }) => {
             </p>
           </button>
           {type === "login" ? (
-            <p className="mt-8 text-primary text-lg">
+            <p className="mt-6 text-primary text-base">
               Not registered yet? Register
               <a
                 className="text-secondary underline cursor-pointer ml-1"

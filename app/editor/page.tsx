@@ -17,6 +17,7 @@ import {
   handleCanvasZoom,
   initializeFabric,
   renderCanvas,
+  updateBrushSettings,
 } from "@/lib/canvas";
 import { ActiveElement, Attributes } from "@/types/type";
 import { useStorage } from "@/liveblocks.config";
@@ -30,6 +31,9 @@ import LeftSideBar from "@/components/LeftSideBar";
 import TopBar from "@/components/TopBar";
 import { Room } from "@/app/Room";
 import { useAuth } from "@/components/AuthProvider";
+import PremadeShapesModal, {
+  PremadeShape,
+} from "@/components/PremadeShapesModal";
 
 function EditorContent() {
   const { user } = useAuth();
@@ -65,6 +69,9 @@ function EditorContent() {
     value: "",
   });
 
+  const [isPremadeShapesModalOpen, setIsPremadeShapesModalOpen] =
+    useState(false);
+
   const undo = useUndo();
   const redo = useRedo();
 
@@ -84,7 +91,7 @@ function EditorContent() {
 
   const deleteShapeFromStorage = useMutation(({ storage }, objectId) => {
     const canvasObjects = storage.get("canvasObjects") as LiveMap<string, Lson>;
-
+    console.log(canvasObjects);
     canvasObjects.delete(objectId);
   }, []);
 
@@ -108,8 +115,32 @@ function EditorContent() {
     };
   }, [activeElement, deleteShapeFromStorage]);
 
+  const handlePremadeShapeSelect = (shape: PremadeShape) => {
+    // Set the selected shape ref to enable multiple placements
+    selectedShapeRef.current = `premade:${shape.src}`;
+
+    // Set the active element to show premade shapes is active
+    setActiveElement({
+      icon: "/assets/shapes.svg",
+      name: "Premade Shapes",
+      value: "premade-shapes",
+    });
+
+    // We don't need to prepare an instance since we create new ones on each click
+    // The old approach was preparing one instance, but now we create fresh ones each time
+  };
+
   const handleActiveElement = (elem: ActiveElement) => {
     setActiveElement(elem);
+
+    // Handle delete case first, before clearing selection
+    if (elem?.value === "delete") {
+      if (fabricRef.current) {
+        handleDelete(fabricRef.current, deleteShapeFromStorage);
+        setActiveElement(defaultNavElement);
+      }
+      return;
+    }
 
     // Clear all references and canvas selection when switching tools
     activeObjectRef.current = null;
@@ -128,20 +159,24 @@ function EditorContent() {
         fabricRef.current?.clear();
         setActiveElement(defaultNavElement);
         break;
-      case "delete":
-        if (fabricRef.current) {
-          handleDelete(fabricRef.current, deleteShapeFromStorage);
-          setActiveElement(defaultNavElement);
-        }
-
-        break;
       case "image":
         imageInputRef.current?.click();
         isDrawing.current = false;
         if (fabricRef.current) {
           fabricRef.current.isDrawingMode = false;
         }
-        break;
+        // Don't set selectedShapeRef for images - they're handled differently
+        selectedShapeRef.current = null;
+        return; // Return early to avoid setting selectedShapeRef at the end
+      case "premade-shapes":
+        setIsPremadeShapesModalOpen(true);
+        isDrawing.current = false;
+        if (fabricRef.current) {
+          fabricRef.current.isDrawingMode = false;
+        }
+        // Don't set selectedShapeRef for premade shapes - they're handled differently
+        selectedShapeRef.current = null;
+        return; // Return early to avoid setting selectedShapeRef at the end
       default:
         break;
     }
@@ -199,6 +234,8 @@ function EditorContent() {
           activeObjectRef,
           isPanning,
           lastPanPoint,
+          syncShapeInStorage,
+          setActiveElement: handleActiveElement,
           brushSettings: {
             width: parseInt(elementAttributes.brushWidth),
             color: elementAttributes.brushColor,
@@ -334,6 +371,23 @@ function EditorContent() {
     }
   }, [canvasObjects, isCanvasInitialized]);
 
+  // Update brush settings when elementAttributes change and user is in drawing mode
+  useEffect(() => {
+    if (fabricRef.current && selectedShapeRef.current === "freeform") {
+      updateBrushSettings(fabricRef.current, {
+        width: parseInt(elementAttributes.brushWidth),
+        color: elementAttributes.brushColor,
+        texture: elementAttributes.brushTexture,
+        roughness: parseInt(elementAttributes.brushRoughness),
+      });
+    }
+  }, [
+    elementAttributes.brushWidth,
+    elementAttributes.brushColor,
+    elementAttributes.brushTexture,
+    elementAttributes.brushRoughness,
+  ]);
+
   return (
     <div className="overflow-hidden relative w-screen h-screen">
       <TopBar userName={userName} />
@@ -364,6 +418,11 @@ function EditorContent() {
         syncShapeInStorage={syncShapeInStorage}
         allShapes={Array.from(canvasObjects)}
         selectedShapeRef={selectedShapeRef}
+      />
+      <PremadeShapesModal
+        isOpen={isPremadeShapesModalOpen}
+        onClose={() => setIsPremadeShapesModalOpen(false)}
+        onSelectShape={handlePremadeShapeSelect}
       />
     </div>
   );

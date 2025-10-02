@@ -93,6 +93,13 @@ export type ImageUpload = {
   syncShapeInStorage: (shape: fabric.Object) => void;
 };
 
+export type PremadeShapeUpload = {
+  shapeSrc: string;
+  canvas: React.MutableRefObject<fabric.Canvas | null>;
+  shapeRef: React.MutableRefObject<fabric.Object | null>;
+  syncShapeInStorage: (shape: fabric.Object) => void;
+};
+
 export type RightSidebarProps = {
   allShapes: Array<any>;
   elementAttributes: Attributes;
@@ -132,6 +139,8 @@ export type CanvasMouseDown = {
   activeObjectRef: React.MutableRefObject<fabric.Object | null>;
   isPanning: React.MutableRefObject<boolean>;
   lastPanPoint: React.MutableRefObject<{ x: number; y: number } | null>;
+  syncShapeInStorage: (shape: fabric.Object) => void;
+  setActiveElement?: (element: ActiveElement) => void;
   brushSettings?: {
     width: number;
     color: string;

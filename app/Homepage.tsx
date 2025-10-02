@@ -4,6 +4,7 @@ import Modal from "./Modal";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/firebase.config";
 import { PrimaryButton } from "@/components/general/Button";
+import BackgroundBlur from "@/components/BackgroundBlur";
 
 export const Card = ({ image, title, description }) => {
   return (
@@ -52,20 +53,7 @@ const Homepage = () => {
 
   return (
     <>
-      <div
-        className="absolute top-0 left-0 z-20 w-screen min-h-screen h-full"
-        style={{
-          background:
-            "linear-gradient(90deg,rgba(0, 0, 0, 0.5) 0%, rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, 0.5) 100%)",
-        }}
-      ></div>
-      <div
-        className="absolute top-0 left-0 z-20 w-screen min-h-screen h-full"
-        style={{
-          background:
-            "linear-gradient(180deg,rgba(0, 0, 0, 0.5) 0%, rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, 0) 100%)",
-        }}
-      ></div>
+      <BackgroundBlur />
       <img
         className="absolute top-0 left-0 z-10 w-full h-2/5 object-cover opacity-50"
         src="/map.jpg"
@@ -80,7 +68,7 @@ const Homepage = () => {
           {userName ? (
             <button
               className="text-3xl cursor-pointer underline"
-              onClick={() => router.push("/maps")}
+              onClick={() => router.push("/profile")}
             >
               {userName}
             </button>

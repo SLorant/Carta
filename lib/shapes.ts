@@ -104,20 +104,42 @@ export const handleImageUpload = ({
       img.scaleToWidth(200);
       img.scaleToHeight(200);
 
-      if (canvas.current) {
-        canvas.current.add(img);
+      // Don't add to canvas immediately - prepare for placement
+      (img as fabric.Image & { objectId?: string }).objectId = uuidv4();
 
-        (img as fabric.Image & { objectId?: string }).objectId = uuidv4();
+      // Store the prepared image for placement on next click
+      shapeRef.current = img;
 
-        shapeRef.current = img;
-
-        syncShapeInStorage(img);
-        canvas.current.requestRenderAll();
-      }
+      // Don't sync to storage yet - wait for placement
     });
   };
 
   reader.readAsDataURL(file);
+};
+
+export const handlePremadeShapeUpload = ({
+  shapeSrc,
+  canvas,
+  shapeRef,
+  syncShapeInStorage,
+}: {
+  shapeSrc: string;
+  canvas: React.MutableRefObject<fabric.Canvas | null>;
+  shapeRef: React.MutableRefObject<fabric.Object | null>;
+  syncShapeInStorage: (shape: fabric.Object) => void;
+}) => {
+  fabric.Image.fromURL(shapeSrc, (img) => {
+    img.scaleToWidth(200);
+    img.scaleToHeight(200);
+
+    // Don't add to canvas immediately - prepare for placement
+    (img as fabric.Image & { objectId?: string }).objectId = uuidv4();
+
+    // Store the prepared image for placement on next click
+    shapeRef.current = img;
+
+    // Don't sync to storage yet - wait for placement
+  });
 };
 
 export const createShape = (

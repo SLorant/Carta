@@ -98,24 +98,84 @@ export const getShapeInfo = (shapeType: string) => {
   }
 };
 
-export const exportToPdf = () => {
+export const exportToPdf = async () => {
   const canvas = document.querySelector("canvas");
 
   if (!canvas) return;
 
-  // use jspdf
-  const doc = new jsPDF({
-    orientation: "landscape",
-    unit: "px",
-    format: [canvas.width, canvas.height],
-  });
+  // Create a temporary canvas for compositing
+  const tempCanvas = document.createElement("canvas");
+  const tempCtx = tempCanvas.getContext("2d");
 
-  // get the canvas data url
-  const data = canvas.toDataURL();
+  if (!tempCtx) return;
 
-  // add the image to the pdf
-  doc.addImage(data, "PNG", 0, 0, canvas.width, canvas.height);
+  // Set the same dimensions as the original canvas
+  tempCanvas.width = canvas.width;
+  tempCanvas.height = canvas.height;
 
-  // download the pdf
-  doc.save("canvas.pdf");
+  try {
+    // Load and draw the background image (sea.png)
+    const backgroundImg = new Image();
+    backgroundImg.crossOrigin = "anonymous";
+
+    await new Promise((resolve, reject) => {
+      backgroundImg.onload = resolve;
+      backgroundImg.onerror = reject;
+      backgroundImg.src = "/textures/sea.png";
+    });
+
+    // Draw the background image
+    tempCtx.drawImage(backgroundImg, 0, 0, tempCanvas.width, tempCanvas.height);
+
+    // Draw the original canvas content on top
+    tempCtx.drawImage(canvas, 0, 0);
+
+    // Load and draw the overlay texture (mild.png) with multiply blend mode
+    const overlayImg = new Image();
+    overlayImg.crossOrigin = "anonymous";
+
+    await new Promise((resolve, reject) => {
+      overlayImg.onload = resolve;
+      overlayImg.onerror = reject;
+      overlayImg.src = "/textures/mild.png";
+    });
+
+    // Apply the overlay with multiply blend mode and reduced opacity
+    tempCtx.globalCompositeOperation = "multiply";
+    tempCtx.globalAlpha = 0.5;
+    tempCtx.drawImage(overlayImg, 0, 0, tempCanvas.width, tempCanvas.height);
+
+    // Reset blend mode and opacity
+    tempCtx.globalCompositeOperation = "source-over";
+    tempCtx.globalAlpha = 1.0;
+
+    // Create PDF with the composite image
+    const doc = new jsPDF({
+      orientation: "landscape",
+      unit: "px",
+      format: [tempCanvas.width, tempCanvas.height],
+    });
+
+    // Get the composite canvas data
+    const data = tempCanvas.toDataURL();
+
+    // Add the composite image to the pdf
+    doc.addImage(data, "PNG", 0, 0, tempCanvas.width, tempCanvas.height);
+
+    // Download the pdf
+    doc.save("canvas.pdf");
+  } catch (error) {
+    console.error("Error creating PDF with background:", error);
+
+    // Fallback to original method if background loading fails
+    const doc = new jsPDF({
+      orientation: "landscape",
+      unit: "px",
+      format: [canvas.width, canvas.height],
+    });
+
+    const data = canvas.toDataURL();
+    doc.addImage(data, "PNG", 0, 0, canvas.width, canvas.height);
+    doc.save("canvas.pdf");
+  }
 };

@@ -125,12 +125,14 @@ const RightSideBar = ({
             handleInputChange={handleInputChange}
           />
         )}
-        <Text
-          fontFamily={elementAttributes.fontFamily}
-          fontSize={elementAttributes.fontSize}
-          fontWeight={elementAttributes.fontWeight}
-          handleInputChange={handleInputChange}
-        />
+        {activeObjectRef.current?.type === "i-text" && (
+          <Text
+            fontFamily={elementAttributes.fontFamily}
+            fontSize={elementAttributes.fontSize}
+            fontWeight={elementAttributes.fontWeight}
+            handleInputChange={handleInputChange}
+          />
+        )}
         <Color
           inputRef={colorInputRef}
           attribute={elementAttributes.fill}
@@ -138,13 +140,16 @@ const RightSideBar = ({
           attributeType="fill"
           handleInputChange={handleInputChange}
         />
-        <Color
-          inputRef={strokeInputRef}
-          attribute={elementAttributes.stroke}
-          placeholder="stroke"
-          attributeType="stroke"
-          handleInputChange={handleInputChange}
-        />
+        {activeObjectRef.current?.type !== "i-text" && (
+          <Color
+            inputRef={strokeInputRef}
+            attribute={elementAttributes.stroke}
+            placeholder="stroke"
+            attributeType="stroke"
+            handleInputChange={handleInputChange}
+          />
+        )}
+
         <Opacity
           attribute={elementAttributes.opacity}
           placeholder="opacity"

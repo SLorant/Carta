@@ -24,10 +24,12 @@ export const configureFreeDrawingBrush = (
   }
 ) => {
   const brush = canvas.freeDrawingBrush;
+  console.log(settings, brush);
 
   // Set basic brush properties
   brush.width = settings.width;
   brush.color = settings.color;
+  brush.stroke = settings.color;
 
   // Configure texture and roughness based on settings
   switch (settings.texture) {
@@ -90,9 +92,18 @@ export const initializeFabric = ({
   const canvas = new fabric.Canvas(canvasElement, {
     width: canvasElement.clientWidth || 800,
     height: canvasElement.clientHeight || 600,
-    backgroundColor: "#224477",
+    /*    backgroundColor: "#224477", */ // Fallback color while image loads
     fireMiddleClick: true,
   });
+
+  // Set CSS background for fixed background that doesn't zoom
+  const canvasHTMLElement = canvas.getElement();
+  if (canvasHTMLElement) {
+    canvasHTMLElement.style.backgroundImage = "url('/textures/sea.png')";
+    canvasHTMLElement.style.backgroundSize = "cover";
+    canvasHTMLElement.style.backgroundPosition = "center";
+    canvasHTMLElement.style.backgroundRepeat = "no-repeat";
+  }
 
   // set canvas reference to fabricRef so we can use it later anywhere outside canvas listener
   fabricRef.current = canvas;
@@ -110,6 +121,8 @@ export const handleCanvasMouseDown = ({
   activeObjectRef,
   isPanning,
   lastPanPoint,
+  syncShapeInStorage,
+  setActiveElement,
   brushSettings,
 }: CanvasMouseDown) => {
   const evt = options.e as MouseEvent;
@@ -151,12 +164,23 @@ export const handleCanvasMouseDown = ({
     // Configure brush based on settings received as parameters
     const defaultBrushSettings = {
       width: 20,
-      color: "#ffffff",
+      color: "#000000", // Default to black instead of white
       texture: "continental",
       roughness: 75,
     };
 
-    configureFreeDrawingBrush(canvas, brushSettings || defaultBrushSettings);
+    // Use the passed brushSettings, but fall back to defaults for any missing properties
+    const effectiveBrushSettings = {
+      width: brushSettings?.width || defaultBrushSettings.width,
+      color: brushSettings?.color || defaultBrushSettings.color,
+      stroke: brushSettings?.color || defaultBrushSettings.color,
+      texture: brushSettings?.texture || defaultBrushSettings.texture,
+      roughness: brushSettings?.roughness || defaultBrushSettings.roughness,
+    };
+
+    console.log(brushSettings);
+
+    /*  configureFreeDrawingBrush(canvas, effectiveBrushSettings); */
     return;
   }
 
@@ -180,6 +204,81 @@ export const handleCanvasMouseDown = ({
      * setCoords: http://fabricjs.com/docs/fabric.Object.html#setCoords
      */
     target.setCoords();
+  } else if (
+    selectedShapeRef.current &&
+    selectedShapeRef.current.startsWith("premade:")
+  ) {
+    // Handle premade shapes - create new instance each time like regular shapes
+    isDrawing.current = false;
+
+    const shapeSrc = selectedShapeRef.current.replace("premade:", "");
+
+    // Create a new image instance for placement
+    fabric.Image.fromURL(shapeSrc, (img) => {
+      img.scaleToWidth(50);
+      img.scaleToHeight(50);
+
+      // Position the image at the clicked location
+      img.set({
+        left: pointer.x - (img.width! * img.scaleX!) / 2,
+        top: pointer.y - (img.height! * img.scaleY!) / 2,
+      });
+
+      // Set objectId for the image
+      (img as fabric.Image & { objectId?: string }).objectId = uuid4();
+
+      // Add the image to canvas
+      canvas.add(img);
+
+      // Assign z-index based on current canvas position
+      const objects = canvas.getObjects();
+      const newIndex = objects.length - 1;
+      (img as unknown as fabric.Object & { zIndex: number }).zIndex = newIndex;
+
+      // Sync to storage and render
+      syncShapeInStorage(img);
+      canvas.renderAll();
+    });
+
+    // Keep selectedShapeRef set for multiple placements (don't clear it)
+  } else if (shapeRef.current && shapeRef.current.type === "image") {
+    // Handle placement of prepared images (from upload or premade shapes)
+    isDrawing.current = false;
+
+    // Position the image at the clicked location
+    shapeRef.current.set({
+      left:
+        pointer.x - (shapeRef.current.width! * shapeRef.current.scaleX!) / 2,
+      top:
+        pointer.y - (shapeRef.current.height! * shapeRef.current.scaleY!) / 2,
+    });
+
+    // Add the image to canvas
+    canvas.add(shapeRef.current);
+
+    // Assign z-index based on current canvas position
+    const objects = canvas.getObjects();
+    const newIndex = objects.length - 1;
+    (shapeRef.current as fabric.Object & { zIndex: number }).zIndex = newIndex;
+
+    // Now sync to storage and render
+    syncShapeInStorage(shapeRef.current);
+    canvas.renderAll();
+
+    // Clear the shapeRef to exit placement mode
+    shapeRef.current = null;
+
+    // Switch back to select mode after placing image
+    selectedShapeRef.current = null;
+
+    // Set active element back to select mode
+    if (setActiveElement) {
+      setActiveElement({
+        icon: "/assets/select.svg",
+        name: "Select",
+        value: "select",
+      });
+    }
   } else if (
     selectedShapeRef.current &&
     selectedShapeRef.current !== "select"
@@ -552,28 +651,28 @@ export const renderCanvas = ({
     return;
   }
 
-  // Store the current background color before clearing
-  const backgroundColor = fabricRef.current.backgroundColor;
+  // Get current objects on canvas
+  const currentObjects = fabricRef.current.getObjects();
 
-  // clear canvas
-  fabricRef.current.clear();
-
-  // Restore the background color after clearing (fallback to #333 if undefined)
-  fabricRef.current.setBackgroundColor(
-    backgroundColor || "#333",
-    fabricRef.current.renderAll.bind(fabricRef.current)
+  // Get objects from storage
+  const storageObjectIds = new Set(
+    Array.from(canvasObjects as Map<string, unknown>).map(([id]) => id)
   );
 
-  // render all objects on canvas in proper z-index order
+  // Find objects to remove (exist on canvas but not in storage)
+  const objectsToRemove = currentObjects.filter((obj) => {
+    const objectId = (obj as fabric.Object & { objectId?: string }).objectId;
+    return objectId && !storageObjectIds.has(objectId);
+  });
+
+  // Remove objects that are no longer in storage
+  objectsToRemove.forEach((obj) => {
+    fabricRef.current?.remove(obj);
+  });
+
+  // Find objects to add/update (exist in storage but not on canvas or need updating)
   const objectEntries = Array.from(
     canvasObjects as Map<string, fabric.Object & { zIndex?: number }>
-  );
-
-  console.log(canvasObjects);
-
-  console.log(
-    "renderCanvas - objectEntries before sort:",
-    objectEntries.map(([id, obj]) => ({ id, zIndex: obj.zIndex }))
   );
 
   const sortedCanvasObjects = objectEntries.sort((a, b) => {
@@ -584,22 +683,28 @@ export const renderCanvas = ({
     return aZIndex - bZIndex; // Sort by z-index (bottom to top)
   });
 
-  console.log(
-    "renderCanvas - sortedCanvasObjects after sort:",
-    sortedCanvasObjects.map(([id, obj]) => ({ id, zIndex: obj.zIndex }))
-  );
-
   sortedCanvasObjects.forEach((entry) => {
     const [objectId, objectData] = entry;
-    /**
-     * enlivenObjects() is used to render objects on canvas.
-     * It takes two arguments:
-     * 1. objectData: object data to render on canvas
-     * 2. callback: callback function to execute after rendering objects
-     * on canvas
-     *
-     * enlivenObjects: http://fabricjs.com/docs/fabric.util.html#.enlivenObjectEnlivables
-     */
+
+    // Check if object already exists on canvas
+    const existingObject = currentObjects.find(
+      (obj) =>
+        (obj as fabric.Object & { objectId?: string }).objectId === objectId
+    );
+
+    if (existingObject) {
+      // Object exists, just update its properties if needed
+      // For now, we'll skip updating to avoid flashing - objects are updated via other mechanisms
+      if (
+        activeObjectRef.current?.objectId === objectId &&
+        fabricRef.current?.getActiveObject() !== existingObject
+      ) {
+        fabricRef.current?.setActiveObject(existingObject);
+      }
+      return;
+    }
+
+    // Object doesn't exist on canvas, create it
     fabric.util.enlivenObjects(
       [objectData],
       (enlivenedObjects: fabric.Object[]) => {
@@ -627,13 +732,6 @@ export const renderCanvas = ({
           fabricRef.current?.add(enlivenedObj);
         });
       },
-      /**
-       * specify namespace of the object for fabric to render it on canvas
-       * A namespace is a string that is used to identify the type of
-       * object.
-       *
-       * Fabric Namespace: http://fabricjs.com/docs/fabric.html
-       */
       "fabric"
     );
   });

@@ -70,6 +70,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
           const result = await response.json();
           return result;
         }}
+        resolveUsers={async ({ userIds }) => {
+          // For each userId (which is an email in our case), return user info
+          return userIds.map((userId) => ({
+            name: userId.split("@")[0], // Use the username part of the email
+            avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(
+              userId
+            )}&background=random`, // Generate avatar from email
+          }));
+        }}
       >
         {children}
       </LiveblocksProvider>

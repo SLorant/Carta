@@ -205,9 +205,9 @@ const Live = ({ canvasRef, undo, redo }: Props) => {
           <div className="relative w-full h-full">
             <canvas ref={canvasRef} className="z-40 w-full h-full" />
             <div
-              className="absolute top-0 left-0 w-full h-full z-50 opacity-20 pointer-events-none"
+              className="absolute top-0 left-0 w-full h-full z-50 opacity-50 pointer-events-none"
               style={{
-                backgroundImage: "url('/map6.png')",
+                backgroundImage: "url('/textures/mild.png')",
                 backgroundSize: "cover",
                 backgroundPosition: "center",
                 mixBlendMode: "multiply",

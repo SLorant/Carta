@@ -31,6 +31,11 @@ export const shapeElements = [
     name: "Free Drawing",
     value: "freeform",
   },
+  {
+    icon: "/assets/shapes.svg",
+    name: "Premade Shapes",
+    value: "premade-shapes",
+  },
 ];
 
 export const navElements = [
@@ -82,6 +87,7 @@ export const fontFamilyOptions = [
   { value: "Times New Roman", label: "Times New Roman" },
   { value: "Comic Sans MS", label: "Comic Sans MS" },
   { value: "Brush Script MT", label: "Brush Script MT" },
+  { value: "Enchanted Land", label: "Enchanted Land" },
 ];
 
 export const fontSizeOptions = [
@@ -140,6 +146,38 @@ export const fontSizeOptions = [
   {
     value: "36",
     label: "36",
+  },
+  {
+    value: "40",
+    label: "40",
+  },
+  {
+    value: "48",
+    label: "48",
+  },
+  {
+    value: "56",
+    label: "56",
+  },
+  {
+    value: "64",
+    label: "64",
+  },
+  {
+    value: "72",
+    label: "72",
+  },
+  {
+    value: "80",
+    label: "80",
+  },
+  {
+    value: "96",
+    label: "96",
+  },
+  {
+    value: "128",
+    label: "128",
   },
 ];
 
