@@ -238,7 +238,7 @@ const Layers = ({
               ],
               index: number
             ) => {
-              const info = getShapeInfo(shape[1]?.type as string);
+              const info = getShapeInfo(shape[1]?.type as string, shape[1]);
               const objectId = shape[1]?.objectId as string;
               const isActive =
                 getObjectId(activeObjectRef.current!) === objectId;

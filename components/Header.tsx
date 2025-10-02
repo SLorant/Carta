@@ -1,9 +1,11 @@
 import { User } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import React from "react";
+import { useUserProfile } from "@/hooks/useUserProfile";
 
 const Header = ({ user }: { user: User }) => {
   const router = useRouter();
+  const { profile } = useUserProfile();
 
   return (
     <div className="absolute px-72 top-6 w-full flex justify-between text-secondary ">
@@ -17,7 +19,7 @@ const Header = ({ user }: { user: User }) => {
         className="text-2xl cursor-pointer underline"
         onClick={() => router.push("/profile")}
       >
-        {user.email}
+        {profile?.username || user.email}
       </button>
     </div>
   );

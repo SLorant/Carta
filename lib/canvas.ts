@@ -34,21 +34,23 @@ export const configureFreeDrawingBrush = (
   // Configure texture and roughness based on settings
   switch (settings.texture) {
     case "smooth":
-      brush.decimate = 5; // Less decimation for smoother lines
+      brush.decimate = 0; // Less decimation for smoother lines
       break;
     case "rough":
-      brush.decimate = 15; // More decimation for rougher lines
+      brush.decimate = 0; // More decimation for rougher lines
       break;
     case "textured":
-      brush.decimate = 10; // Medium decimation
+      brush.decimate = 0; // Medium decimation
       break;
     case "continental":
-      brush.decimate = Math.floor(20 + (settings.roughness / 100) * 30); // Variable decimation based on roughness
+      brush.decimate = 0; // Medium decimation
+
+      /*   brush.decimate = Math.floor(20 + (settings.roughness / 100) * 30); // Variable decimation based on roughness
       // Create a custom pattern brush for continental effect
-      createContinentalBrush(canvas, settings);
+      createContinentalBrush(canvas, settings); */
       break;
     default:
-      brush.decimate = 10;
+      brush.decimate = 0;
   }
 };
 
@@ -94,6 +96,7 @@ export const initializeFabric = ({
     height: canvasElement.clientHeight || 600,
     /*    backgroundColor: "#224477", */ // Fallback color while image loads
     fireMiddleClick: true,
+    preserveObjectStacking: true, // Prevent objects from being brought to front when selected
   });
 
   // Set CSS background for fixed background that doesn't zoom
@@ -211,7 +214,12 @@ export const handleCanvasMouseDown = ({
     // Handle premade shapes - create new instance each time like regular shapes
     isDrawing.current = false;
 
-    const shapeSrc = selectedShapeRef.current.replace("premade:", "");
+    const premadeData = selectedShapeRef.current.replace("premade:", "");
+    const [shapeSrc, shapeName] = premadeData.split(":");
+
+    // Use the provided shape name or fall back to extracting from path
+    const displayName =
+      shapeName || shapeSrc.split("/").pop()?.split(".")[0] || "Image";
 
     // Create a new image instance for placement
     fabric.Image.fromURL(shapeSrc, (img) => {
@@ -224,8 +232,13 @@ export const handleCanvasMouseDown = ({
         top: pointer.y - (img.height! * img.scaleY!) / 2,
       });
 
-      // Set objectId for the image
-      (img as fabric.Image & { objectId?: string }).objectId = uuid4();
+      // Set objectId and premade shape name for the image
+      (
+        img as fabric.Image & { objectId?: string; premadeName?: string }
+      ).objectId = uuid4();
+      (
+        img as fabric.Image & { objectId?: string; premadeName?: string }
+      ).premadeName = displayName;
 
       // Add the image to canvas
       canvas.add(img);
@@ -728,6 +741,15 @@ export const renderCanvas = ({
               currentIndex;
           }
 
+          // Restore premadeName from storage if it exists
+          const storedPremadeName = (
+            objectData as unknown as Record<string, unknown>
+          ).premadeName as string | undefined;
+          if (storedPremadeName !== undefined) {
+            (enlivenedObj as fabric.Object & { premadeName: string }).premadeName =
+              storedPremadeName;
+          }
+
           // add object to canvas
           fabricRef.current?.add(enlivenedObj);
         });
@@ -777,6 +799,38 @@ export const handleCanvasZoom = ({
 
   options.e.preventDefault();
   options.e.stopPropagation();
+};
+
+// Manual zoom in function
+export const handleZoomIn = (canvas: fabric.Canvas) => {
+  const currentZoom = canvas.getZoom();
+  const maxZoom = 10;
+  const zoomStep = 0.1;
+
+  const newZoom = Math.min(currentZoom + zoomStep, maxZoom);
+
+  // Zoom to center of canvas
+  const center = canvas.getCenter();
+  canvas.zoomToPoint({ x: center.left, y: center.top }, newZoom);
+};
+
+// Manual zoom out function
+export const handleZoomOut = (canvas: fabric.Canvas) => {
+  const currentZoom = canvas.getZoom();
+  const minZoom = 0.2;
+  const zoomStep = 0.1;
+
+  const newZoom = Math.max(currentZoom - zoomStep, minZoom);
+
+  // Zoom to center of canvas
+  const center = canvas.getCenter();
+  canvas.zoomToPoint({ x: center.left, y: center.top }, newZoom);
+};
+
+// Reset zoom to 100%
+export const handleZoomReset = (canvas: fabric.Canvas) => {
+  const center = canvas.getCenter();
+  canvas.zoomToPoint({ x: center.left, y: center.top }, 1);
 };
 
 // Update brush settings when they change

@@ -9,6 +9,7 @@ import ProfilePictureUpload from "@/components/ProfilePictureUpload";
 import BackgroundBlur from "@/components/BackgroundBlur";
 import Header from "@/components/Header";
 import { CancelButton, PrimaryButton } from "@/components/general/Button";
+import { TextInput } from "@/components/inputs/TextInput";
 
 const Profile = () => {
   const router = useRouter();
@@ -19,7 +20,18 @@ const Profile = () => {
     uploading,
     updateProfilePicture,
     removeProfilePicture,
+    updateProfile,
   } = useUserProfile();
+  
+  const [isEditingUsername, setIsEditingUsername] = React.useState(false);
+  const [tempUsername, setTempUsername] = React.useState("");
+
+  // Initialize temp username when profile loads
+  React.useEffect(() => {
+    if (profile?.username) {
+      setTempUsername(profile.username);
+    }
+  }, [profile?.username]);
 
   // Redirect to home if not authenticated
   React.useEffect(() => {
@@ -27,6 +39,22 @@ const Profile = () => {
       router.push("/");
     }
   }, [loading, user, router]);
+
+  const handleSaveUsername = async () => {
+    if (tempUsername.trim() && updateProfile) {
+      try {
+        await updateProfile({ username: tempUsername.trim() });
+        setIsEditingUsername(false);
+      } catch (error) {
+        console.error("Error updating username:", error);
+      }
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setTempUsername(profile?.username || "");
+    setIsEditingUsername(false);
+  };
 
   const handleLogout = () => {
     signOut(auth)
@@ -84,9 +112,47 @@ const Profile = () => {
               )}
             </div>
             <div className=" ml-10 flex flex-col text-secondary">
-              <h2 className="text-4xl underline">
+              <div className="flex items-center gap-4">
+                {isEditingUsername ? (
+                  <div className="flex items-center gap-2">
+                    <TextInput
+                      label=""
+                      value={tempUsername}
+                      onChange={(e) => setTempUsername(e.target.value)}
+                      placeholder="Enter username"
+                      className="w-64"
+                      inputClassName="text-2xl"
+                    />
+                    <button
+                      onClick={handleSaveUsername}
+                      className="text-green-500 hover:text-green-400 text-lg px-2"
+                    >
+                      ✓
+                    </button>
+                    <button
+                      onClick={handleCancelEdit}
+                      className="text-red-500 hover:text-red-400 text-lg px-2"
+                    >
+                      ✗
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-4xl underline">
+                      {profile?.username || "Set Username"}
+                    </h2>
+                    <button
+                      onClick={() => setIsEditingUsername(true)}
+                      className="text-secondary hover:text-primary text-lg px-2"
+                    >
+                      ✏️
+                    </button>
+                  </div>
+                )}
+              </div>
+              <p className="mt-2 text-lg">
                 {profile?.email || "Loading..."}
-              </h2>
+              </p>
               <p className="mt-2 text-lg">
                 {profile?.bio || "User bio and other info"}
               </p>

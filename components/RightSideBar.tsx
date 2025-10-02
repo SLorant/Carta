@@ -76,7 +76,7 @@ const RightSideBar = ({
   };
 
   return (
-    <section className="absolute border-l-2 border-black top-20 right-0 bg-black/0 w-60 h-full max-h-screen z-50 overflow-auto">
+    <section className="absolute border-l-2 border-black top-18 right-0 bg-black/0 w-60 h-full max-h-screen z-50 overflow-auto">
       <div className="w-full flex flex-col items-start pl-6 justify-center h-20 p-2 border-b-5 border-gray-400">
         <ActiveUsers />
       </div>
@@ -109,7 +109,7 @@ const RightSideBar = ({
           />
         ) : null}
       </div>
-      <div className="px-2 mt-2 overflow-scroll">
+      <div className="px-2 mt-2">
         <Dimensions
           height={elementAttributes.height}
           width={elementAttributes.width}

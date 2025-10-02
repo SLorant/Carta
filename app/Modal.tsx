@@ -6,11 +6,14 @@ import {
 } from "firebase/auth";
 import { TextInput } from "@/components/inputs/TextInput";
 import { PrimaryButton } from "@/components/general/Button";
+import { createUserProfileOnRegistration } from "@/lib/profileService";
 
 // TODO: types
 const Modal = ({ type, onClose, setModal, router }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [username, setUsername] = useState("");
 
   const onLogin = (e) => {
     e.preventDefault();
@@ -31,10 +34,26 @@ const Modal = ({ type, onClose, setModal, router }) => {
   const onSubmit = async (e) => {
     e.preventDefault();
 
+    if (password !== confirmPassword) {
+      alert("Passwords don't match!");
+      return;
+    }
+
+    if (!username.trim() && type === "register") {
+      alert("Please enter a username!");
+      return;
+    }
+
     await createUserWithEmailAndPassword(auth, email, password)
-      .then((userCredential) => {
+      .then(async (userCredential) => {
         // Signed in
         const user = userCredential.user;
+        
+        // Create user profile with username
+        if (type === "register") {
+          await createUserProfileOnRegistration(user.uid, email, username);
+        }
+        
         console.log(user);
         router.push("/maps");
       })
@@ -61,6 +80,13 @@ const Modal = ({ type, onClose, setModal, router }) => {
             placeholder="Email"
             onChange={(e) => setEmail(e.target.value)}
           />
+          {type === "register" && (
+            <TextInput
+              label="Username"
+              placeholder="Username"
+              onChange={(e) => setUsername(e.target.value)}
+            />
+          )}
           <TextInput
             label="Password"
             placeholder="Password"
@@ -71,7 +97,7 @@ const Modal = ({ type, onClose, setModal, router }) => {
             <TextInput
               label="Confirm Password"
               placeholder="Confirm Password"
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => setConfirmPassword(e.target.value)}
               type="password"
             />
           )}

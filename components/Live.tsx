@@ -242,15 +242,15 @@ const Live = ({ canvasRef, undo, redo }: Props) => {
           <Comments />
         </ContextMenuTrigger>
 
-        <ContextMenuContent className="right-menu-content">
+        <ContextMenuContent className="right-menu-content bg-background">
           {shortcuts.map((item) => (
             <ContextMenuItem
               key={item.key}
-              className="right-menu-item"
+              className="right-menu-item hover:bg-gray-600 duration-200 cursor-pointer"
               onClick={() => handleContextMenuClick(item.name)}
             >
-              <p>{item.name}</p>
-              <p className="text-xs text-primary-grey-300">{item.shortcut}</p>
+              <p className="text-secondary mr-2 ">{item.name}</p>
+              <p className="text-xs text-primary">{item.shortcut}</p>
             </ContextMenuItem>
           ))}
         </ContextMenuContent>

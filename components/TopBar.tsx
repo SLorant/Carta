@@ -5,15 +5,15 @@ const TopBar = ({ userName }) => {
   const router = useRouter();
 
   return (
-    <div className="absolute z-50 px-10 bg-black/10 border-b-2 pb-4 border-black top-0 pt-2 w-full h-20 flex justify-between text-secondary ">
+    <div className="absolute z-50 px-10 bg-black/10 border-b-2 pb-4 border-black top-0 pt-2 w-full h-18 flex justify-between text-secondary ">
       <button
-        className="text-4xl text-secondary cursor-pointer opacity-50"
+        className="text-3xl text-secondary cursor-pointer opacity-50"
         onClick={() => router.push("/")}
       >
         CARTA
       </button>
       <button
-        className="text-4xl cursor-pointer underline"
+        className="text-2xl cursor-pointer underline"
         onClick={() => router.push("/profile")}
       >
         {userName}

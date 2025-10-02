@@ -35,7 +35,7 @@ const ActiveUsers = () => {
         {currentUser && (
           <Avatar
             name="You"
-            otherStyles="border-[3px] border-primary-green"
+            otherStyles="border-[2px] border-white !h-11 !w-11"
             profilePictureUrl={profile?.profilePictureUrl}
             userId={profile?.uid}
           />

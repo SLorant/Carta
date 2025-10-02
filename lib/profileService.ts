@@ -20,6 +20,7 @@ import { db, storage } from "@/firebase.config";
 export interface UserProfile {
   uid: string;
   email: string;
+  username?: string;
   displayName?: string;
   bio?: string;
   profilePictureUrl?: string;
@@ -38,6 +39,7 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
       return {
         uid,
         email: data.email,
+        username: data.username,
         displayName: data.displayName,
         bio: data.bio,
         profilePictureUrl: data.profilePictureUrl,
@@ -69,6 +71,7 @@ export async function getUserProfileByEmail(
       return {
         uid: doc.id,
         email: data.email,
+        username: data.username,
         displayName: data.displayName,
         bio: data.bio,
         profilePictureUrl: data.profilePictureUrl,
@@ -107,8 +110,13 @@ export async function saveUserProfile(profile: UserProfile): Promise<void> {
     console.log("Saving user profile:", profile);
     const docRef = doc(db, "users", profile.uid);
 
+    // Filter out undefined values to avoid Firestore errors
+    const cleanProfile = Object.fromEntries(
+      Object.entries(profile).filter(([, value]) => value !== undefined)
+    );
+
     const profileData = {
-      ...profile,
+      ...cleanProfile,
       createdAt: profile.createdAt || serverTimestamp(),
       updatedAt: serverTimestamp(),
     };
@@ -117,6 +125,29 @@ export async function saveUserProfile(profile: UserProfile): Promise<void> {
     console.log("User profile saved successfully");
   } catch (error) {
     console.error("Error saving user profile:", error);
+    throw error;
+  }
+}
+
+export async function createUserProfileOnRegistration(
+  uid: string,
+  email: string,
+  username: string
+): Promise<UserProfile> {
+  try {
+    const userProfile: UserProfile = {
+      uid,
+      email,
+      username,
+      displayName: "",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    await saveUserProfile(userProfile);
+    return userProfile;
+  } catch (error) {
+    console.error("Error creating user profile on registration:", error);
     throw error;
   }
 }

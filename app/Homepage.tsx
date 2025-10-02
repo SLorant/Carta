@@ -5,6 +5,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/firebase.config";
 import { PrimaryButton } from "@/components/general/Button";
 import BackgroundBlur from "@/components/BackgroundBlur";
+import { useUserProfile } from "@/hooks/useUserProfile";
 
 export const Card = ({ image, title, description }) => {
   return (
@@ -29,19 +30,27 @@ const Homepage = () => {
   const [userName, setUserName] = useState("");
   const [modalType, setModalType] = useState<"login" | "register" | null>(null);
   const router = useRouter();
+  const { profile } = useUserProfile();
 
   useEffect(() => {
     onAuthStateChanged(auth, (user) => {
       if (user) {
         // https://firebase.google.com/docs/reference/js/firebase.User
         const uid = user.uid;
-        setUserName(user.email ?? "");
+        setUserName(profile?.username || (user.email ?? ""));
         console.log("uid", uid);
       } else {
         console.log("user is logged out");
       }
     });
-  }, []);
+  }, [profile?.username]);
+
+  // Update userName when profile changes
+  useEffect(() => {
+    if (profile?.username) {
+      setUserName(profile.username);
+    }
+  }, [profile?.username]);
 
   const openModal = (type: "login" | "register") => {
     setModalType(type);

@@ -55,7 +55,7 @@ const PremadeShapesModal = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Choose Premade Shape"
+      title="Choose Asset to place"
       subtitle="Select a shape to add to your canvas"
       className="max-w-2xl"
     >
@@ -64,9 +64,10 @@ const PremadeShapesModal = ({
         <div className="flex gap-2 border-b border-secondary/20">
           {CATEGORIES.map((category) => (
             <button
+              style={{ fontFamily: "Recursive, sans-serif" }}
               key={category}
               onClick={() => setSelectedCategory(category)}
-              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors  cursor-pointer ${
                 selectedCategory === category
                   ? "border-primary text-primary"
                   : "border-transparent text-secondary hover:text-primary"
@@ -83,7 +84,7 @@ const PremadeShapesModal = ({
             <Button
               key={shape.name}
               onClick={() => handleShapeSelect(shape)}
-              className="flex flex-col items-center p-4 h-auto bg-transparent border border-secondary/20 hover:border-primary hover:bg-secondary/10 transition-colors"
+              className="flex flex-col items-center p-4 h-auto bg-transparent border  cursor-pointer border-secondary/20 hover:border-primary hover:bg-secondary/10 transition-colors"
               variant="outline"
             >
               <div className="w-12 h-12 mb-2 flex items-center justify-center">
@@ -95,7 +96,7 @@ const PremadeShapesModal = ({
                   className="object-contain text-primary"
                 />
               </div>
-              <span className="text-sm text-primary">{shape.name}</span>
+              <span className="text-sm text-primary mt-2">{shape.name}</span>
             </Button>
           ))}
         </div>

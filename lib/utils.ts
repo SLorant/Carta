@@ -46,7 +46,18 @@ export function generateRandomName(): string {
   return `${randomAdjective} ${randomAnimal}`;
 }
 
-export const getShapeInfo = (shapeType: string) => {
+export const getShapeInfo = (
+  shapeType: string,
+  shapeData?: { premadeName?: string; [key: string]: unknown }
+) => {
+  // Check if this is a premade shape (image type with premadeName)
+  if (shapeType === "image" && shapeData?.premadeName) {
+    return {
+      icon: "/assets/image.svg",
+      name: shapeData.premadeName,
+    };
+  }
+
   switch (shapeType) {
     case "rect":
       return {

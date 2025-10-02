@@ -15,6 +15,9 @@ import {
   handlePathCreated,
   handleResize,
   handleCanvasZoom,
+  handleZoomIn,
+  handleZoomOut,
+  handleZoomReset,
   initializeFabric,
   renderCanvas,
   updateBrushSettings,
@@ -34,9 +37,11 @@ import { useAuth } from "@/components/AuthProvider";
 import PremadeShapesModal, {
   PremadeShape,
 } from "@/components/PremadeShapesModal";
+import { useUserProfile } from "@/hooks/useUserProfile";
 
 function EditorContent() {
   const { user } = useAuth();
+  const { profile } = useUserProfile();
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fabricRef = useRef<fabric.Canvas | null>(null);
@@ -75,7 +80,26 @@ function EditorContent() {
   const undo = useUndo();
   const redo = useRedo();
 
-  const userName = user?.email || "";
+  const userName = profile?.username || user?.email || "";
+
+  // Zoom handler functions
+  const handleZoomInCanvas = () => {
+    if (fabricRef.current) {
+      handleZoomIn(fabricRef.current);
+    }
+  };
+
+  const handleZoomOutCanvas = () => {
+    if (fabricRef.current) {
+      handleZoomOut(fabricRef.current);
+    }
+  };
+
+  const handleZoomResetCanvas = () => {
+    if (fabricRef.current) {
+      handleZoomReset(fabricRef.current);
+    }
+  };
 
   const deleteAllShapes = useMutation(({ storage }) => {
     const canvasObjects = storage.get("canvasObjects") as LiveMap<string, Lson>;
@@ -116,8 +140,8 @@ function EditorContent() {
   }, [activeElement, deleteShapeFromStorage]);
 
   const handlePremadeShapeSelect = (shape: PremadeShape) => {
-    // Set the selected shape ref to enable multiple placements
-    selectedShapeRef.current = `premade:${shape.src}`;
+    // Set the selected shape ref to enable multiple placements, including shape name
+    selectedShapeRef.current = `premade:${shape.src}:${shape.name}`;
 
     // Set the active element to show premade shapes is active
     setActiveElement({
@@ -201,6 +225,16 @@ function EditorContent() {
       (shapeData as Record<string, unknown>).zIndex = (
         object as fabric.Object & { zIndex: number }
       ).zIndex;
+    }
+
+    // Include custom premadeName property in storage for premade shapes
+    if (
+      (object as fabric.Object & { premadeName?: string }).premadeName !==
+      undefined
+    ) {
+      (shapeData as Record<string, unknown>).premadeName = (
+        object as fabric.Object & { premadeName: string }
+      ).premadeName;
     }
 
     const canvasObjects = storage.get("canvasObjects") as LiveMap<string, Lson>;
@@ -407,6 +441,9 @@ function EditorContent() {
           }
         }}
         imageInputRef={imageInputRef}
+        handleZoomIn={handleZoomInCanvas}
+        handleZoomOut={handleZoomOutCanvas}
+        handleZoomReset={handleZoomResetCanvas}
       />
       <Live canvasRef={canvasRef} undo={undo} redo={redo} />
       <RightSideBar

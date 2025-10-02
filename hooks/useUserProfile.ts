@@ -32,6 +32,7 @@ export function useUserProfile() {
             userProfile = {
               uid: firebaseUser.uid,
               email: firebaseUser.email || "",
+              username: "",
               displayName: firebaseUser.displayName || "",
               createdAt: new Date(),
               updatedAt: new Date(),
@@ -48,6 +49,7 @@ export function useUserProfile() {
             const basicProfile: UserProfile = {
               uid: firebaseUser.uid,
               email: firebaseUser.email,
+              username: "",
               displayName: firebaseUser.displayName || "",
               createdAt: new Date(),
               updatedAt: new Date(),

@@ -2,6 +2,16 @@ export const COLORS = ["#DC2626", "#D97706", "#059669", "#7C3AED", "#DB2777"];
 
 export const shapeElements = [
   {
+    icon: "/assets/freeform.svg",
+    name: "Brush",
+    value: "freeform",
+  },
+  {
+    icon: "/castle.svg",
+    name: "Assets",
+    value: "premade-shapes",
+  },
+  {
     icon: "/assets/rectangle.svg",
     name: "Rectangle",
     value: "rectangle",
@@ -10,11 +20,6 @@ export const shapeElements = [
     icon: "/assets/circle.svg",
     name: "Circle",
     value: "circle",
-  },
-  {
-    icon: "/assets/triangle.svg",
-    name: "Triangle",
-    value: "triangle",
   },
   {
     icon: "/assets/line.svg",
@@ -26,16 +31,6 @@ export const shapeElements = [
     name: "Image",
     value: "image",
   },
-  {
-    icon: "/assets/freeform.svg",
-    name: "Free Drawing",
-    value: "freeform",
-  },
-  {
-    icon: "/assets/shapes.svg",
-    name: "Premade Shapes",
-    value: "premade-shapes",
-  },
 ];
 
 export const navElements = [
@@ -45,7 +40,7 @@ export const navElements = [
     value: "select",
   },
   {
-    icon: "/assets/rectangle.svg",
+    icon: "/castle.svg",
     name: "Rectangle",
     value: shapeElements,
   },
