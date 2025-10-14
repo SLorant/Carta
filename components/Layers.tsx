@@ -46,8 +46,33 @@ const Layers = ({
 
     console.log(zIndexMap);
 
-    // Sort allShapes by their z-index (canvas order)
-    return allShapes.slice().sort((a, b) => {
+    // Filter out individual color layer paths and create a single color layer entry
+    const filteredShapes = allShapes.filter(([, shape]) => {
+      return shape?.objectId !== "color-layer";
+    });
+
+    // Check if there are any color layer paths
+    const colorLayerPaths = allShapes.filter(([, shape]) => {
+      return shape?.objectId === "color-layer";
+    });
+
+    // If there are color layer paths, add a single "Color" entry
+    if (colorLayerPaths.length > 0) {
+      // Use the first color path as the representative, but modify its display info
+      const colorLayerEntry: [string, any] = [
+        "color-layer", // Use a consistent key
+        {
+          ...colorLayerPaths[0][1], // Copy properties from first path
+          objectId: "color-layer",
+          type: "color", // Set type to "color" for proper icon display
+          name: "Color Layer",
+        },
+      ];
+      filteredShapes.push(colorLayerEntry);
+    }
+
+    // Sort filtered shapes by their z-index (canvas order)
+    return filteredShapes.slice().sort((a, b) => {
       const aIndex = zIndexMap.get(a[1]?.objectId) ?? -1;
       const bIndex = zIndexMap.get(b[1]?.objectId) ?? -1;
       return bIndex - aIndex; // Reverse order (top objects first in list)
@@ -56,6 +81,12 @@ const Layers = ({
 
   const handleDragStart = useCallback(
     (e: React.DragEvent, objectId: string) => {
+      // Prevent dragging of color layer since it represents multiple objects
+      if (objectId === "color-layer") {
+        e.preventDefault();
+        return;
+      }
+
       setDraggedLayer(objectId);
       e.dataTransfer.effectAllowed = "move";
       e.dataTransfer.setData("text/plain", objectId);
@@ -133,6 +164,16 @@ const Layers = ({
     (objectId: string) => {
       if (!fabricRef.current) return;
 
+      // Special handling for color layer - don't select since it's non-selectable
+      if (objectId === "color-layer") {
+        // Just clear any existing selection
+        const canvas = fabricRef.current;
+        canvas.discardActiveObject();
+        activeObjectRef.current = null;
+        canvas.renderAll();
+        return;
+      }
+
       const canvas = fabricRef.current;
       const targetObject = canvas
         .getObjects()
@@ -154,6 +195,27 @@ const Layers = ({
       if (!fabricRef.current) return;
 
       const canvas = fabricRef.current;
+
+      // Special handling for color layer - toggle visibility of all color paths
+      if (objectId === "color-layer") {
+        const colorObjects = canvas
+          .getObjects()
+          .filter((obj) => getObjectId(obj) === "color-layer");
+
+        if (colorObjects.length > 0) {
+          // Use the first object's visibility state to determine the new state
+          const newVisibility = !colorObjects[0].visible;
+
+          colorObjects.forEach((obj) => {
+            obj.set("visible", newVisibility);
+            syncShapeInStorage(obj);
+          });
+
+          canvas.renderAll();
+        }
+        return;
+      }
+
       const targetObject = canvas
         .getObjects()
         .find((obj) => getObjectId(obj) === objectId);
@@ -174,6 +236,27 @@ const Layers = ({
       if (!fabricRef.current) return;
 
       const canvas = fabricRef.current;
+
+      // Special handling for color layer - move all color paths
+      if (objectId === "color-layer") {
+        const colorObjects = canvas
+          .getObjects()
+          .filter((obj) => getObjectId(obj) === "color-layer");
+
+        colorObjects.forEach((obj) => {
+          canvas.bringToFront(obj);
+        });
+
+        // Update z-index for all objects after reordering
+        canvas.getObjects().forEach((obj, index) => {
+          (obj as fabric.Object & { zIndex: number }).zIndex = index;
+          syncShapeInStorage(obj);
+        });
+
+        canvas.renderAll();
+        return;
+      }
+
       const targetObject = canvas
         .getObjects()
         .find((obj) => getObjectId(obj) === objectId);
@@ -201,6 +284,27 @@ const Layers = ({
       if (!fabricRef.current) return;
 
       const canvas = fabricRef.current;
+
+      // Special handling for color layer - move all color paths to back
+      if (objectId === "color-layer") {
+        const colorObjects = canvas
+          .getObjects()
+          .filter((obj) => getObjectId(obj) === "color-layer");
+
+        colorObjects.forEach((obj) => {
+          canvas.sendToBack(obj);
+        });
+
+        // Update z-index for all objects after reordering
+        canvas.getObjects().forEach((obj, index) => {
+          (obj as fabric.Object & { zIndex: number }).zIndex = index;
+          syncShapeInStorage(obj);
+        });
+
+        canvas.renderAll();
+        return;
+      }
+
       const targetObject = canvas
         .getObjects()
         .find((obj) => getObjectId(obj) === objectId);
@@ -244,7 +348,17 @@ const Layers = ({
                 getObjectId(activeObjectRef.current!) === objectId;
               const isDragging = draggedLayer === objectId;
               const isDragOver = dragOverLayer === objectId;
-              const isVisible = shape[1]?.visible !== false;
+
+              // Special visibility check for color layer
+              let isVisible = shape[1]?.visible !== false;
+              if (objectId === "color-layer" && fabricRef.current) {
+                // Check visibility of actual color layer objects on canvas
+                const colorObjects = fabricRef.current
+                  .getObjects()
+                  .filter((obj) => getObjectId(obj) === "color-layer");
+                // Layer is visible if any color object is visible
+                isVisible = colorObjects.some((obj) => obj.visible !== false);
+              }
 
               return (
                 <div
@@ -359,6 +473,7 @@ const Layers = ({
       handleLayerVisibilityToggle,
       handleMoveToFront,
       handleMoveToBack,
+      fabricRef,
     ]
   );
 

@@ -7,6 +7,11 @@ export const shapeElements = [
     value: "freeform",
   },
   {
+    icon: "/assets/circle.svg",
+    name: "Color",
+    value: "color",
+  },
+  {
     icon: "/castle.svg",
     name: "Assets",
     value: "premade-shapes",

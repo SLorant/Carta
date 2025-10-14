@@ -37,11 +37,13 @@ const RightSideBar = ({
         [property]: value,
       };
 
-      // If it's a brush property and we're in freeform mode, update brush settings
+      // If it's a brush property and we're in freeform or color mode, update brush settings
       if (
         (property.startsWith("brush") &&
-          selectedShapeRef.current === "freeform") ||
-        selectedShapeRef.current === "freeform"
+          (selectedShapeRef.current === "freeform" ||
+            selectedShapeRef.current === "color")) ||
+        selectedShapeRef.current === "freeform" ||
+        selectedShapeRef.current === "color"
       ) {
         const brushSettings = {
           width: parseInt(property === "brushWidth" ? value : prev.brushWidth),
@@ -60,10 +62,11 @@ const RightSideBar = ({
       return newAttributes;
     });
 
-    // Only call modifyShape for non-brush properties or when not in freeform mode
+    // Only call modifyShape for non-brush properties or when not in freeform or color mode
     if (
       !property.startsWith("brush") ||
-      selectedShapeRef.current !== "freeform"
+      (selectedShapeRef.current !== "freeform" &&
+        selectedShapeRef.current !== "color")
     ) {
       modifyShape({
         canvas: fabricRef.current as fabric.Canvas,
@@ -116,7 +119,8 @@ const RightSideBar = ({
           isEditingRef={isEditingRef}
           handleInputChange={handleInputChange}
         />
-        {selectedShapeRef.current === "freeform" && (
+        {(selectedShapeRef.current === "freeform" ||
+          selectedShapeRef.current === "color") && (
           <BrushSettings
             brushWidth={elementAttributes.brushWidth}
             brushColor={elementAttributes.brushColor}

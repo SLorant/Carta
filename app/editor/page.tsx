@@ -216,9 +216,16 @@ function EditorContent() {
   const syncShapeInStorage = useMutation(({ storage }, object) => {
     if (!object) return;
     const { objectId } = object;
+    const storageId = (object as fabric.Object & { storageId?: string })
+      .storageId;
 
     const shapeData = object.toJSON();
     shapeData.objectId = objectId;
+
+    // Include custom storageId property in storage for color layer objects
+    if (storageId) {
+      (shapeData as Record<string, unknown>).storageId = storageId;
+    }
 
     // Include custom zIndex property in storage
     if ((object as fabric.Object & { zIndex?: number }).zIndex !== undefined) {
@@ -239,7 +246,9 @@ function EditorContent() {
 
     const canvasObjects = storage.get("canvasObjects") as LiveMap<string, Lson>;
 
-    canvasObjects?.set(objectId, shapeData);
+    // Use storageId as key for color layer objects, objectId for others
+    const storageKey = storageId || objectId;
+    canvasObjects?.set(storageKey, shapeData);
   }, []);
 
   const [isCanvasInitialized, setIsCanvasInitialized] = useState(false);
@@ -270,12 +279,6 @@ function EditorContent() {
           lastPanPoint,
           syncShapeInStorage,
           setActiveElement: handleActiveElement,
-          brushSettings: {
-            width: parseInt(elementAttributes.brushWidth),
-            color: elementAttributes.brushColor,
-            texture: elementAttributes.brushTexture,
-            roughness: parseInt(elementAttributes.brushRoughness),
-          },
         });
       });
 
@@ -345,6 +348,8 @@ function EditorContent() {
         handlePathCreated({
           options,
           syncShapeInStorage,
+          selectedShapeRef,
+          elementAttributes,
         });
       });
 
@@ -407,12 +412,17 @@ function EditorContent() {
 
   // Update brush settings when elementAttributes change and user is in drawing mode
   useEffect(() => {
-    if (fabricRef.current && selectedShapeRef.current === "freeform") {
+    if (
+      fabricRef.current &&
+      (selectedShapeRef.current === "freeform" ||
+        selectedShapeRef.current === "color")
+    ) {
       updateBrushSettings(fabricRef.current, {
         width: parseInt(elementAttributes.brushWidth),
         color: elementAttributes.brushColor,
         texture: elementAttributes.brushTexture,
         roughness: parseInt(elementAttributes.brushRoughness),
+        opacity: parseFloat(elementAttributes.opacity),
       });
     }
   }, [
@@ -420,6 +430,7 @@ function EditorContent() {
     elementAttributes.brushColor,
     elementAttributes.brushTexture,
     elementAttributes.brushRoughness,
+    elementAttributes.opacity,
   ]);
 
   return (

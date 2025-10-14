@@ -70,7 +70,12 @@ export const handleDelete = (
     activeObjects.forEach((obj: CustomFabricObject) => {
       if (!obj.objectId) return;
       canvas.remove(obj);
-      deleteShapeFromStorage(obj.objectId);
+
+      // For color layer objects, use storageId; for others, use objectId
+      const storageId = (obj as CustomFabricObject & { storageId?: string })
+        .storageId;
+      const deleteId = storageId || obj.objectId;
+      deleteShapeFromStorage(deleteId);
     });
   }
 

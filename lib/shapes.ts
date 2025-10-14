@@ -147,7 +147,7 @@ export const createShape = (
   pointer: PointerEvent,
   shapeType: string
 ) => {
-  if (shapeType === "freeform") {
+  if (shapeType === "freeform" || shapeType === "color") {
     canvas.isDrawingMode = true;
     return null;
   }

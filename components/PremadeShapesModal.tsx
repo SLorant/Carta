@@ -18,7 +18,7 @@ interface PremadeShapesModalProps {
 const PREMADE_SHAPES: PremadeShape[] = [
   {
     name: "Castle",
-    src: "/assets/Castle.png",
+    src: "/assets/Castle2.png",
     category: "Buildings",
   },
   {

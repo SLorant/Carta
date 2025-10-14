@@ -22,7 +22,7 @@ const Profile = () => {
     removeProfilePicture,
     updateProfile,
   } = useUserProfile();
-  
+
   const [isEditingUsername, setIsEditingUsername] = React.useState(false);
   const [tempUsername, setTempUsername] = React.useState("");
 
@@ -96,7 +96,7 @@ const Profile = () => {
             </PrimaryButton>
           </div>
         </div>
-        <div className="flex w-full h-full mt-20">
+        <div className="flex w-full h-full mt-12">
           <div className="w-full h-[300px] bg-black/15 rounded-[20px] border border-black flex justify-start items-center drop-shadow-lg">
             <div className="ml-20">
               {loading ? (
@@ -150,12 +150,10 @@ const Profile = () => {
                   </div>
                 )}
               </div>
-              <p className="mt-2 text-lg">
-                {profile?.email || "Loading..."}
-              </p>
-              <p className="mt-2 text-lg">
+              <p className="mt-2 text-lg">{profile?.email || "Loading..."}</p>
+              {/*  <p className="mt-2 text-lg">
                 {profile?.bio || "User bio and other info"}
-              </p>
+              </p> */}
             </div>
             <CancelButton
               className="absolute bottom-8 right-8  text-4xl "

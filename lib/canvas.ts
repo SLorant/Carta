@@ -21,15 +21,26 @@ export const configureFreeDrawingBrush = (
     color: string;
     texture: string;
     roughness: number;
+    opacity?: number;
   }
 ) => {
   const brush = canvas.freeDrawingBrush;
   console.log(settings, brush);
 
+  // Convert color to RGBA if opacity is provided
+  let brushColor = settings.color;
+  if (settings.opacity !== undefined && settings.opacity < 1) {
+    // Convert hex color to RGBA
+    const hex = settings.color.replace("#", "");
+    const r = parseInt(hex.substr(0, 2), 16);
+    const g = parseInt(hex.substr(2, 2), 16);
+    const b = parseInt(hex.substr(4, 2), 16);
+    brushColor = `rgba(${r}, ${g}, ${b}, ${settings.opacity})`;
+  }
+
   // Set basic brush properties
   brush.width = settings.width;
-  brush.color = settings.color;
-  brush.stroke = settings.color;
+  brush.color = brushColor;
 
   // Configure texture and roughness based on settings
   switch (settings.texture) {
@@ -126,7 +137,6 @@ export const handleCanvasMouseDown = ({
   lastPanPoint,
   syncShapeInStorage,
   setActiveElement,
-  brushSettings,
 }: CanvasMouseDown) => {
   const evt = options.e as MouseEvent;
 
@@ -153,37 +163,34 @@ export const handleCanvasMouseDown = ({
    *
    * findTarget: http://fabricjs.com/docs/fabric.Canvas.html#findTarget
    */
-  const target = canvas.findTarget(options.e, false);
+  let target = canvas.findTarget(options.e, false);
+
+  // If the target is a color layer object, ignore it and find the next target
+  if (
+    target &&
+    (target as fabric.Object & { objectId?: string }).objectId === "color-layer"
+  ) {
+    target = undefined;
+  }
 
   // set canvas drawing mode to false
   canvas.isDrawingMode = false;
   console.log(selectedShapeRef, canvas);
 
-  // if selected shape is freeform, set drawing mode to true and return
-  if (selectedShapeRef.current === "freeform") {
+  // if selected shape is freeform or color, set drawing mode to true and return
+  if (
+    selectedShapeRef.current === "freeform" ||
+    selectedShapeRef.current === "color"
+  ) {
     isDrawing.current = true;
     canvas.isDrawingMode = true;
 
-    // Configure brush based on settings received as parameters
-    const defaultBrushSettings = {
-      width: 20,
-      color: "#000000", // Default to black instead of white
-      texture: "continental",
-      roughness: 75,
-    };
+    // Configure the brush with current settings including opacity
+    const brushSettings = (options as any).brushSettings;
+    if (brushSettings) {
+      configureFreeDrawingBrush(canvas, brushSettings);
+    }
 
-    // Use the passed brushSettings, but fall back to defaults for any missing properties
-    const effectiveBrushSettings = {
-      width: brushSettings?.width || defaultBrushSettings.width,
-      color: brushSettings?.color || defaultBrushSettings.color,
-      stroke: brushSettings?.color || defaultBrushSettings.color,
-      texture: brushSettings?.texture || defaultBrushSettings.texture,
-      roughness: brushSettings?.roughness || defaultBrushSettings.roughness,
-    };
-
-    console.log(brushSettings);
-
-    /*  configureFreeDrawingBrush(canvas, effectiveBrushSettings); */
     return;
   }
 
@@ -364,9 +371,13 @@ export const handleCanvaseMouseMove = ({
     return;
   }
 
-  // if selected shape is freeform, return
+  // if selected shape is freeform or color, return
   if (!isDrawing.current) return;
-  if (selectedShapeRef.current === "freeform") return;
+  if (
+    selectedShapeRef.current === "freeform" ||
+    selectedShapeRef.current === "color"
+  )
+    return;
 
   canvas.isDrawingMode = false;
 
@@ -451,7 +462,11 @@ export const handleCanvasMouseUp = ({
   }
 
   isDrawing.current = false;
-  if (selectedShapeRef.current === "freeform") return;
+  if (
+    selectedShapeRef.current === "freeform" ||
+    selectedShapeRef.current === "color"
+  )
+    return;
 
   // sync shape in storage as drawing is stopped
   syncShapeInStorage(shapeRef.current);
@@ -486,11 +501,93 @@ export const handleCanvasObjectModified = ({
 export const handlePathCreated = ({
   options,
   syncShapeInStorage,
-}: CanvasPathCreated) => {
+  selectedShapeRef,
+  elementAttributes,
+}: CanvasPathCreated & {
+  selectedShapeRef?: React.MutableRefObject<string | null>;
+  elementAttributes?: { opacity?: string };
+}) => {
   // get path object
   const path = options.path;
   if (!path) return;
 
+  // Check if we're in color mode
+  if (selectedShapeRef?.current === "color") {
+    // For color tool, we want to merge all drawing into one shape
+    const canvas = path.canvas;
+    if (!canvas) return;
+
+    // Apply opacity to the new path before adding it
+    if (elementAttributes?.opacity) {
+      path.set({
+        opacity: parseFloat(elementAttributes.opacity),
+      });
+    }
+
+    // Make the new path completely non-interactive
+    path.set({
+      selectable: false,
+      evented: false,
+      hoverCursor: "default",
+      moveCursor: "default",
+      excludeFromExport: false,
+      hasControls: false,
+      hasBorders: false,
+      lockMovementX: true,
+      lockMovementY: true,
+      lockRotation: true,
+      lockScalingX: true,
+      lockScalingY: true,
+      lockUniScaling: true,
+    });
+
+    // Set the objectId on the new path (shared by all color paths)
+    (path as fabric.Object & { objectId?: string }).objectId = "color-layer";
+
+    // Set a unique storage ID for this specific path instance
+    (path as fabric.Object & { storageId?: string }).storageId = uuid4();
+
+    // Path is already added to canvas automatically by fabric.js, no need to add it again
+
+    // Get the highest z-index among existing color paths to maintain proper layering
+    const existingColorPaths = canvas
+      .getObjects()
+      .filter(
+        (obj: fabric.Object) =>
+          (obj as fabric.Object & { objectId?: string }).objectId ===
+          "color-layer"
+      );
+
+    let colorZIndex = -1000; // Start with base low z-index for first color stroke
+    if (existingColorPaths.length > 1) {
+      // More than just the current path
+      const maxColorZIndex = Math.max(
+        ...existingColorPaths
+          .filter((obj: fabric.Object) => obj !== path) // Exclude the current path
+          .map(
+            (obj: fabric.Object) =>
+              (obj as fabric.Object & { zIndex: number }).zIndex || -1000
+          )
+      );
+      colorZIndex = maxColorZIndex + 1; // Place new stroke above previous ones
+    }
+
+    (path as fabric.Object & { zIndex: number }).zIndex = colorZIndex;
+
+    // Only send to back if it's the first color stroke
+    if (existingColorPaths.length === 1) {
+      // Only the current path exists
+      canvas.sendToBack(path);
+    }
+    canvas.renderAll();
+
+    // sync the individual path in storage
+    syncShapeInStorage(path);
+
+    return;
+  }
+
+  // Normal freeform behavior
   // set unique id to path object
   path.set({
     objectId: uuid4(),
@@ -551,6 +648,20 @@ export const handleCanvasSelectionCreated = ({
 
   // if no element is selected, return
   if (!options?.selected) return;
+
+  // Check if the selected object is a color layer path - if so, deselect it
+  const selectedObj = options?.selected[0] as fabric.Object & {
+    objectId?: string;
+  };
+  if (selectedObj && selectedObj.objectId === "color-layer") {
+    // Deselect the color layer object
+    const canvas = selectedObj.canvas as fabric.Canvas;
+    if (canvas) {
+      canvas.discardActiveObject();
+      canvas.renderAll();
+    }
+    return;
+  }
 
   console.log(selectedShapeRef);
 
@@ -674,8 +785,16 @@ export const renderCanvas = ({
 
   // Find objects to remove (exist on canvas but not in storage)
   const objectsToRemove = currentObjects.filter((obj) => {
-    const objectId = (obj as fabric.Object & { objectId?: string }).objectId;
-    return objectId && !storageObjectIds.has(objectId);
+    const objWithIds = obj as fabric.Object & {
+      objectId?: string;
+      storageId?: string;
+    };
+    // For color layers, check by storageId; for regular objects, check by objectId
+    const idToCheck =
+      objWithIds.objectId === "color-layer"
+        ? objWithIds.storageId
+        : objWithIds.objectId;
+    return idToCheck && !storageObjectIds.has(idToCheck);
   });
 
   // Remove objects that are no longer in storage
@@ -697,17 +816,35 @@ export const renderCanvas = ({
   });
 
   sortedCanvasObjects.forEach((entry) => {
-    const [objectId, objectData] = entry;
+    const [storageId, objectData] = entry;
 
-    // Check if object already exists on canvas
-    const existingObject = currentObjects.find(
-      (obj) =>
-        (obj as fabric.Object & { objectId?: string }).objectId === objectId
-    );
+    // Get the objectId from the stored object data
+    const storedObjectId = (objectData as unknown as Record<string, unknown>)
+      .objectId as string;
+
+    // For color layer paths, we need to check by storage ID, not objectId
+    // because multiple paths can have the same objectId ("color-layer")
+    // For regular objects, check by objectId
+    const existingObject = currentObjects.find((obj) => {
+      const objWithIds = obj as fabric.Object & {
+        objectId?: string;
+        storageId?: string;
+      };
+
+      if (storedObjectId === "color-layer") {
+        // For color layers, match by storageId
+        return objWithIds.storageId === storageId;
+      } else {
+        // For regular objects, match by objectId
+        return objWithIds.objectId === storageId;
+      }
+    });
 
     if (existingObject) {
       // Object exists, just update its properties if needed
       // For now, we'll skip updating to avoid flashing - objects are updated via other mechanisms
+      const objectId = (existingObject as fabric.Object & { objectId?: string })
+        .objectId;
       if (
         activeObjectRef.current?.objectId === objectId &&
         fabricRef.current?.getActiveObject() !== existingObject
@@ -722,8 +859,39 @@ export const renderCanvas = ({
       [objectData],
       (enlivenedObjects: fabric.Object[]) => {
         enlivenedObjects.forEach((enlivenedObj) => {
+          // Set the storage ID so we can track this specific object instance
+          (enlivenedObj as fabric.Object & { storageId?: string }).storageId =
+            storageId;
+
+          // Get the actual objectId from the object data
+          const actualObjectId = (
+            enlivenedObj as fabric.Object & { objectId?: string }
+          ).objectId;
+
+          // Apply special properties to color layer objects
+          if (actualObjectId === "color-layer") {
+            enlivenedObj.set({
+              selectable: false,
+              evented: false,
+              hoverCursor: "default",
+              moveCursor: "default",
+              excludeFromExport: false,
+              hasControls: false,
+              hasBorders: false,
+              lockMovementX: true,
+              lockMovementY: true,
+              lockRotation: true,
+              lockScalingX: true,
+              lockScalingY: true,
+              lockUniScaling: true,
+            });
+          }
+
           // if element is active, keep it in active state so that it can be edited further
-          if (activeObjectRef.current?.objectId === objectId) {
+          if (
+            activeObjectRef.current?.objectId === actualObjectId &&
+            actualObjectId !== "color-layer"
+          ) {
             fabricRef.current?.setActiveObject(enlivenedObj);
           }
 
@@ -746,8 +914,9 @@ export const renderCanvas = ({
             objectData as unknown as Record<string, unknown>
           ).premadeName as string | undefined;
           if (storedPremadeName !== undefined) {
-            (enlivenedObj as fabric.Object & { premadeName: string }).premadeName =
-              storedPremadeName;
+            (
+              enlivenedObj as fabric.Object & { premadeName: string }
+            ).premadeName = storedPremadeName;
           }
 
           // add object to canvas

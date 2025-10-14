@@ -101,6 +101,18 @@ export const getShapeInfo = (
         name: "Free Drawing",
       };
 
+    case "color":
+      return {
+        icon: "/assets/circle.svg",
+        name: "Color",
+      };
+
+    case "path":
+      return {
+        icon: "/assets/freeform.svg",
+        name: "Drawing",
+      };
+
     default:
       return {
         icon: "/assets/rectangle.svg",
