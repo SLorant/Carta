@@ -19,14 +19,16 @@ import {
   ContextMenuTrigger,
 } from "./ui/context-menu";
 import BackgroundBlur from "./BackgroundBlur";
+import { fabric } from "fabric";
 
 type Props = {
   canvasRef: React.RefObject<HTMLCanvasElement>;
+  fabricRef: React.MutableRefObject<fabric.Canvas | null>;
   undo: () => void;
   redo: () => void;
 };
 
-const Live = ({ canvasRef, undo, redo }: Props) => {
+const Live = ({ canvasRef, fabricRef, undo, redo }: Props) => {
   const [{ cursor }, updateMyPresence] = useMyPresence();
   const [cursorState, setCursorState] = useState<CursorState>({
     mode: CursorMode.Hidden,
@@ -239,7 +241,7 @@ const Live = ({ canvasRef, undo, redo }: Props) => {
 
           <LiveCursors />
 
-          <Comments />
+          <Comments fabricRef={fabricRef} />
         </ContextMenuTrigger>
 
         <ContextMenuContent className="right-menu-content bg-background">

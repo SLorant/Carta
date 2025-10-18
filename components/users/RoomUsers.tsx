@@ -101,7 +101,6 @@ const RoomUsers = ({ room, onClick }: RoomUsersProps) => {
 
     const maxVisible = 4;
     const visibleUsers = userProfiles.slice(0, maxVisible - 1);
-    const remainingCount = userProfiles.length - visibleUsers.length;
 
     return (
       <>
@@ -115,15 +114,12 @@ const RoomUsers = ({ room, onClick }: RoomUsersProps) => {
           />
         ))}
 
-        {remainingCount > 0 ||
-          (userProfiles.length < 4 && (
-            <button
-              className="cursor-pointer w-10 h-10 flex items-center justify-center rounded-full bg-gray-600 text-white text-md"
-              onClick={onClick}
-            >
-              +
-            </button>
-          ))}
+        <button
+          className="cursor-pointer w-10 h-10 flex items-center justify-center rounded-full bg-gray-600 text-white text-md"
+          onClick={onClick}
+        >
+          +
+        </button>
       </>
     );
   }, [userProfiles, loading, onClick]);

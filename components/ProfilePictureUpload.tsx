@@ -1,5 +1,6 @@
 import React, { useRef, useState } from "react";
 import Image from "next/image";
+import { AiOutlineCloseCircle } from "react-icons/ai";
 
 interface ProfilePictureUploadProps {
   currentPictureUrl?: string;
@@ -90,8 +91,9 @@ const ProfilePictureUpload: React.FC<ProfilePictureUploadProps> = ({
     <div className={`relative ${className}`}>
       <div
         className={`
-          ${sizeClasses[size]} 
           rounded-full 
+          h-40 w-40
+          md:h-52 md:w-52
           border-2 border-dashed 
           ${dragOver ? "border-primary bg-primary/10" : "border-gray-400"} 
           ${
@@ -121,7 +123,9 @@ const ProfilePictureUpload: React.FC<ProfilePictureUploadProps> = ({
             {size === "lg" && (
               <>
                 <div className="text-sm">
-                  {uploading ? "Uploading..." : "Click or drag to upload"}
+                  {uploading
+                    ? "Updating profile..."
+                    : "Click or drag to upload"}
                 </div>
               </>
             )}
@@ -140,10 +144,10 @@ const ProfilePictureUpload: React.FC<ProfilePictureUploadProps> = ({
       {currentPictureUrl && onRemove && !uploading && (
         <button
           onClick={handleRemove}
-          className="absolute -top-2 -right-2 w-6 h-6 bg-secondary text-black rounded-full text-sm hover:bg-white cursor-pointer transition-colors"
+          className="absolute -top-2 -right-2 w-6 h-6  text-black rounded-full text-sm cursor-pointer transition-colors"
           title="Remove profile picture"
         >
-          <span className="mt-4">X</span>
+          <AiOutlineCloseCircle className=" text-primary text-2xl hover:text-white" />
         </button>
       )}
 
@@ -158,7 +162,7 @@ const ProfilePictureUpload: React.FC<ProfilePictureUploadProps> = ({
           flex items-center justify-center
         `}
         >
-          <div className="text-white text-sm">Uploading...</div>
+          <div className="text-white text-sm">Updating profile...</div>
         </div>
       )}
 

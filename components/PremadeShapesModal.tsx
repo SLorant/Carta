@@ -18,17 +18,52 @@ interface PremadeShapesModalProps {
 const PREMADE_SHAPES: PremadeShape[] = [
   {
     name: "Castle",
-    src: "/assets/Castle2.png",
+    src: "/assets/castle3.png",
+    category: "Buildings",
+  },
+  {
+    name: "Desert Castle",
+    src: "/assets/castle2.png",
+    category: "Buildings",
+  },
+  {
+    name: "Eastern Castle",
+    src: "/assets/castle2.png",
     category: "Buildings",
   },
   {
     name: "Tree",
-    src: "/assets/tree.png", // We'll create this
+    src: "/assets/tree4.png",
+    category: "Nature",
+  },
+  {
+    name: "Beige Tree",
+    src: "/assets/tree2.png",
+    category: "Nature",
+  },
+  {
+    name: "Pine Tree",
+    src: "/assets/tree3.png",
     category: "Nature",
   },
   {
     name: "Mountain",
-    src: "/assets/mountain.png", // We'll create this
+    src: "/assets/mountain.png",
+    category: "Nature",
+  },
+  {
+    name: "Dune",
+    src: "/assets/mountain2.png",
+    category: "Nature",
+  },
+  {
+    name: "Snow Mountain",
+    src: "/assets/mountain3.png",
+    category: "Nature",
+  },
+  {
+    name: "Hard Mountain",
+    src: "/assets/mountain4.png",
     category: "Nature",
   },
 ];
@@ -57,9 +92,9 @@ const PremadeShapesModal = ({
       onClose={onClose}
       title="Choose Asset to place"
       subtitle="Select a shape to add to your canvas"
-      className="max-w-2xl"
+      className="max-w-3xl w-3xl"
     >
-      <div className="space-y-4">
+      <div className="space-y-4 w-full overflow-x-hidden">
         {/* Category Tabs */}
         <div className="flex gap-2 border-b border-secondary/20">
           {CATEGORIES.map((category) => (
@@ -79,15 +114,15 @@ const PremadeShapesModal = ({
         </div>
 
         {/* Shapes Grid */}
-        <div className="grid grid-cols-3 gap-4 max-h-96 overflow-y-auto">
+        <div className="grid grid-cols-3 gap-4 max-h-96 overflow-y-hidden w-full overflow-x-hidden">
           {filteredShapes.map((shape) => (
             <Button
               key={shape.name}
               onClick={() => handleShapeSelect(shape)}
-              className="flex flex-col items-center p-4 h-auto bg-transparent border  cursor-pointer border-secondary/20 hover:border-primary hover:bg-secondary/10 transition-colors"
+              className="flex flex-col items-center px-4 py-2 h-auto bg-transparent border  cursor-pointer border-secondary/20 hover:border-primary hover:bg-secondary/10 transition-colors"
               variant="outline"
             >
-              <div className="w-12 h-12 mb-2 flex items-center justify-center">
+              <div className="w-14 h-14 mb-2 flex items-center justify-center">
                 <Image
                   src={shape.src}
                   alt={shape.name}

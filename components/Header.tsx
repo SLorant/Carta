@@ -3,12 +3,16 @@ import { useRouter } from "next/navigation";
 import React from "react";
 import { useUserProfile } from "@/hooks/useUserProfile";
 
-const Header = ({ user }: { user: User }) => {
+const Header = ({ user, className }: { user: User; className?: string }) => {
   const router = useRouter();
   const { profile } = useUserProfile();
 
   return (
-    <div className="absolute px-72 top-6 w-full flex justify-between text-secondary ">
+    <div
+      className={`absolute top-6 w-full flex justify-between text-secondary ${
+        className ? className : "px-72"
+      }`}
+    >
       <button
         className="text-4xl text-secondary cursor-pointer opacity-50"
         onClick={() => router.push("/")}

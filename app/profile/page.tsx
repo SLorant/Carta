@@ -10,6 +10,10 @@ import BackgroundBlur from "@/components/BackgroundBlur";
 import Header from "@/components/Header";
 import { CancelButton, PrimaryButton } from "@/components/general/Button";
 import { TextInput } from "@/components/inputs/TextInput";
+import LoadingScreen from "@/components/LoadingScreen";
+import { HiOutlinePencil } from "react-icons/hi";
+import { AiOutlineCloseCircle } from "react-icons/ai";
+import { MdDone } from "react-icons/md";
 
 const Profile = () => {
   const router = useRouter();
@@ -69,11 +73,7 @@ const Profile = () => {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-4xl text-primary">Loading...</div>
-      </div>
-    );
+    return <LoadingScreen message="Loading profile..." />;
   }
 
   if (!user) {
@@ -83,85 +83,89 @@ const Profile = () => {
   return (
     <div>
       <BackgroundBlur />
-      <div className="z-40 px-72 pt-28 relative w-screen h-full flex flex-col items-center justify-start">
-        <Header user={user} />
-        <div className="flex  items-center justify-between w-full ">
-          <h1 className="text-primary text-7xl">Profile</h1>
-          <div className="flex gap-8 mb-8">
+      <div className="z-40 px-10 lg:px-40 xl:px-72 pt-28 relative w-screen h-full flex flex-col items-center justify-start">
+        <Header user={user} className="px-10 lg:px-40 xl:px-72" />
+        <div className="flex  items-center justify-between w-full flex-col sm:flex-row ">
+          <h1 className="text-primary text-5xl lg:text-6xl xl:text-7xl">
+            Profile
+          </h1>
+          <div className="flex sm:gap-8 sm:mb-8">
             <PrimaryButton
-              className="mt-16 !text-2xl "
+              className="mt-8 sm:mt-16 !text-2xl "
               onClick={() => router.push("/maps")}
             >
               Go to your Maps
             </PrimaryButton>
           </div>
         </div>
-        <div className="flex w-full h-full mt-12">
-          <div className="w-full h-[300px] bg-black/15 rounded-[20px] border border-black flex justify-start items-center drop-shadow-lg">
-            <div className="ml-20">
-              {loading ? (
-                <div className="w-52 h-52 rounded-full bg-gray-300 animate-pulse"></div>
-              ) : (
-                <ProfilePictureUpload
-                  currentPictureUrl={profile?.profilePictureUrl}
-                  onUpload={updateProfilePicture}
-                  onRemove={removeProfilePicture}
-                  uploading={uploading}
-                  size="lg"
-                />
-              )}
-            </div>
-            <div className=" ml-10 flex flex-col text-secondary">
-              <div className="flex items-center gap-4">
-                {isEditingUsername ? (
-                  <div className="flex items-center gap-2">
-                    <TextInput
-                      label=""
-                      value={tempUsername}
-                      onChange={(e) => setTempUsername(e.target.value)}
-                      placeholder="Enter username"
-                      className="w-64"
-                      inputClassName="text-2xl"
-                    />
+        <div className=" h-[420px] md:h-[300px] bg-black/15 w-full md:flex-row flex-col rounded-[20px] mt-12 border border-black flex justify-start items-start md:justify-start md:items-center drop-shadow-lg">
+          <div className="ml-10 sm:ml-20 mt-10 md:mt-0">
+            {loading ? (
+              <div className="h-40 w-40 sm:w-52 sm:h-52 rounded-full bg-gray-300 animate-pulse"></div>
+            ) : (
+              <ProfilePictureUpload
+                currentPictureUrl={profile?.profilePictureUrl}
+                onUpload={updateProfilePicture}
+                onRemove={removeProfilePicture}
+                uploading={uploading}
+                size="lg"
+              />
+            )}
+          </div>
+          <div className="ml-15 sm:ml-25 mt-4 md:mt-0 md:ml-10 flex flex-col text-secondary">
+            <div className="flex items-center gap-4">
+              {isEditingUsername ? (
+                <div className="flex items-center gap-2 md:flex-row flex-col">
+                  <TextInput
+                    label=""
+                    value={tempUsername}
+                    onChange={(e) => setTempUsername(e.target.value)}
+                    placeholder="Enter username"
+                    className="w-40 md:w-64"
+                    inputClassName="text-base md:text-xl"
+                  />
+                  <div className="flex sm:gap-0 gap-4">
                     <button
                       onClick={handleSaveUsername}
-                      className="text-green-500 hover:text-green-400 text-lg px-2"
+                      className="text-green-500 hover:text-green-400 text-2xl mt-1 px-2 cursor-pointer"
                     >
-                      ✓
+                      <MdDone />
                     </button>
                     <button
                       onClick={handleCancelEdit}
-                      className="text-red-500 hover:text-red-400 text-lg px-2"
+                      className="text-red-500 hover:text-red-400 text-2xl mt-1 pr-2 cursor-pointer"
                     >
-                      ✗
+                      <AiOutlineCloseCircle />
                     </button>
                   </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-4xl underline">
-                      {profile?.username || "Set Username"}
-                    </h2>
-                    <button
-                      onClick={() => setIsEditingUsername(true)}
-                      className="text-secondary hover:text-primary text-lg px-2"
-                    >
-                      ✏️
-                    </button>
-                  </div>
-                )}
-              </div>
-              <p className="mt-2 text-lg">{profile?.email || "Loading..."}</p>
-              {/*  <p className="mt-2 text-lg">
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <h2 className="text-2xl sm:text-3xl lg:text-4xl underline">
+                    {profile?.username || "Set Username"}
+                  </h2>
+                  <button
+                    onClick={() => setIsEditingUsername(true)}
+                    className="text-secondary hover:text-primary text-lg px-2 cursor-pointer"
+                  >
+                    <HiOutlinePencil className="text-secondary text-2xl mt-2 " />
+                  </button>
+                </div>
+              )}
+            </div>
+            <p className="mt-2 text-sm md:text-base lg:text-lg">
+              {profile?.email || "Loading..."}
+            </p>
+            {/*  <p className="mt-2 text-lg">
                 {profile?.bio || "User bio and other info"}
               </p> */}
-            </div>
-            <CancelButton
-              className="absolute bottom-8 right-8  text-4xl "
-              onClick={handleLogout}
-            >
-              Logout
-            </CancelButton>
           </div>
+          <CancelButton
+            className="absolute bottom-8 right-8  text-4xl "
+            onClick={handleLogout}
+          >
+            Logout
+          </CancelButton>
         </div>
       </div>
     </div>

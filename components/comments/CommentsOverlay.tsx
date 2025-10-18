@@ -2,6 +2,7 @@
 
 import { useCallback, useRef } from "react";
 import { ThreadData } from "@liveblocks/client";
+import { fabric } from "fabric";
 
 import {
   ThreadMetadata,
@@ -9,15 +10,21 @@ import {
   useThreads,
 } from "@/liveblocks.config";
 import { useMaxZIndex } from "@/lib/useMaxZIndex";
+import { useCanvasViewport } from "@/hooks/useCanvasViewport";
 
 import { PinnedThread } from "./PinnedThread";
 
 type OverlayThreadProps = {
   thread: ThreadData<ThreadMetadata>;
   maxZIndex: number;
+  transformCanvasToScreen: (canvasX: number, canvasY: number) => { x: number; y: number };
 };
 
-export const CommentsOverlay = () => {
+type CommentsOverlayProps = {
+  fabricRef: React.MutableRefObject<fabric.Canvas | null>;
+};
+
+export const CommentsOverlay = ({ fabricRef }: CommentsOverlayProps) => {
   /**
    * We're using the useThreads hook to get the list of threads
    * in the room.
@@ -29,6 +36,9 @@ export const CommentsOverlay = () => {
   // get the max z-index of a thread
   const maxZIndex = useMaxZIndex();
 
+  // Get canvas viewport transformations
+  const { transformCanvasToScreen } = useCanvasViewport(fabricRef);
+
   return (
     <div>
       {threads
@@ -38,13 +48,14 @@ export const CommentsOverlay = () => {
             key={thread.id}
             thread={thread}
             maxZIndex={maxZIndex}
+            transformCanvasToScreen={transformCanvasToScreen}
           />
         ))}
     </div>
   );
 };
 
-const OverlayThread = ({ thread, maxZIndex }: OverlayThreadProps) => {
+const OverlayThread = ({ thread, maxZIndex, transformCanvasToScreen }: OverlayThreadProps) => {
   /**
    * We're using the useEditThreadMetadata hook to edit the metadata
    * of a thread.
@@ -78,13 +89,16 @@ const OverlayThread = ({ thread, maxZIndex }: OverlayThreadProps) => {
     });
   }, [thread, editThreadMetadata, maxZIndex]);
 
+  // Transform the thread coordinates from canvas space to screen space
+  const screenPosition = transformCanvasToScreen(thread.metadata.x, thread.metadata.y);
+
   return (
     <div
       ref={threadRef}
       id={`thread-${thread.id}`}
       className="absolute left-0 top-0 flex gap-5 z-50"
       style={{
-        transform: `translate(${thread.metadata.x}px, ${thread.metadata.y}px)`,
+        transform: `translate(${screenPosition.x}px, ${screenPosition.y}px)`,
       }}
     >
       {/* render the thread */}

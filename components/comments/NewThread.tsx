@@ -164,17 +164,40 @@ export const NewThread = ({ children }: Props) => {
 
       // Get your canvas element
       const overlayPanel = document.querySelector("#canvas");
+      const canvasElement = document.querySelector("canvas");
 
       // if there's no composer coords or last pointer event, meaning the user hasn't clicked yet, don't do anything
-      if (!composerCoords || !lastPointerEvent.current || !overlayPanel) {
+      if (
+        !composerCoords ||
+        !lastPointerEvent.current ||
+        !overlayPanel ||
+        !canvasElement
+      ) {
         return;
       }
 
       // Set coords relative to the top left of your canvas
       const { top, left } = overlayPanel.getBoundingClientRect();
-      const x = composerCoords.x - left;
-      const y = composerCoords.y - top;
+      let x = composerCoords.x - left;
+      let y = composerCoords.y - top;
 
+      // Try to get the fabric canvas instance and convert coordinates to canvas space
+      // This accounts for zoom and pan transformations
+      const fabricCanvas = (canvasElement as any).__fabric__;
+      if (fabricCanvas) {
+        const zoom = fabricCanvas.getZoom();
+        const vpt = fabricCanvas.viewportTransform;
+
+        if (zoom) {
+          // Convert screen coordinates (relative to canvas element) to canvas coordinates
+          /*  x = (x - vpt[4]) / zoom / 10;
+          y = (y - vpt[5]) / zoom / 10; */
+          console.log(x, y, zoom);
+          x += zoom / 10;
+          y += zoom / 10;
+        }
+      }
+      console.log(x, y);
       // create a new thread with the composer coords and cursor selectors
       createThread({
         body,

@@ -456,7 +456,7 @@ function EditorContent() {
         handleZoomOut={handleZoomOutCanvas}
         handleZoomReset={handleZoomResetCanvas}
       />
-      <Live canvasRef={canvasRef} undo={undo} redo={redo} />
+      <Live canvasRef={canvasRef} fabricRef={fabricRef} undo={undo} redo={redo} />
       <RightSideBar
         elementAttributes={elementAttributes}
         activeObjectRef={activeObjectRef}

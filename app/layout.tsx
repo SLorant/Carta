@@ -27,7 +27,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${recursive.variable} antialiased`}>
+      <body /* className={`${recursive.variable} ${jaini.variable} antialiased`} */
+      >
         <div className="z-0 relative w-screen min-h-screen h-full bg-background">
           <AuthProvider>{children}</AuthProvider>
         </div>
