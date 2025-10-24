@@ -63,12 +63,10 @@ const Profile = () => {
   const handleLogout = () => {
     signOut(auth)
       .then(() => {
-        // Sign-out successful.
         router.push("/");
-        console.log("Signed out successfully");
       })
       .catch((error) => {
-        console.log("Error signing out", error);
+        console.error("Error signing out", error);
       });
   };
 

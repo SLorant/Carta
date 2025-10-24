@@ -12,8 +12,8 @@ export const createRectangle = (pointer: PointerEvent) => {
   const rect = new fabric.Rect({
     left: pointer.x,
     top: pointer.y,
-    width: 100,
-    height: 100,
+    width: 10,
+    height: 10,
     fill: "#fff",
     objectId: uuidv4(),
   } as CustomFabricObject);

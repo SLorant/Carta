@@ -33,8 +33,6 @@ export async function POST(request: Request) {
     // Fall back to uid if email is not available
     const userId = email || uid;
 
-    console.log(decodedToken);
-
     // Use identifyUser for ID token authentication
     // The permissions are managed on the room level, not here
     const { status, body } = await liveblocks.identifyUser({

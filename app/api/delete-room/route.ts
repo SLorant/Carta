@@ -1,4 +1,5 @@
 import { Liveblocks } from "@liveblocks/node";
+import { getAuth } from "firebase-admin/auth";
 import { initializeApp, getApps, cert } from "firebase-admin/app";
 
 // Initialize Firebase Admin if not already initialized
@@ -18,27 +19,39 @@ const liveblocks = new Liveblocks({
 
 export async function POST(request: Request) {
   try {
-    const { roomId, userId, permissions } = await request.json();
+    const { idToken, roomId } = await request.json();
 
-    if (!roomId || !userId) {
+    if (!idToken || !roomId) {
       return new Response("Missing required fields", { status: 400 });
     }
 
-    // If permissions is null, we're removing the user
-    const usersAccesses =
-      permissions === null ? { [userId]: null } : { [userId]: permissions };
+    // Verify the Firebase ID token
+    const decodedToken = await getAuth().verifyIdToken(idToken);
+    const { uid, email } = decodedToken;
+    const userId = email || uid;
 
-    // Update the room permissions on Liveblocks
-    await liveblocks.updateRoom(roomId, {
-      usersAccesses,
-    });
+    // Get the room to verify ownership
+    const room = await liveblocks.getRoom(roomId);
+    
+    if (!room) {
+      return new Response("Room not found", { status: 404 });
+    }
+
+    // Check if the user is the owner
+    const createdBy = room.metadata?.createdBy;
+    if (createdBy !== userId) {
+      return new Response("Only the room owner can delete the room", { status: 403 });
+    }
+
+    // Delete the room from Liveblocks
+    await liveblocks.deleteRoom(roomId);
 
     return Response.json({
       success: true,
-      message: "Room permissions updated successfully",
+      message: "Room deleted successfully",
     });
   } catch (error: unknown) {
-    console.error("Error updating room permissions:", error);
+    console.error("Error deleting room:", error);
 
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error";
@@ -46,7 +59,7 @@ export async function POST(request: Request) {
     return new Response(
       JSON.stringify({
         success: false,
-        error: errorMessage || "Failed to update room permissions",
+        error: errorMessage || "Failed to delete room",
       }),
       { status: 500, headers: { "Content-Type": "application/json" } }
     );

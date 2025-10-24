@@ -18,6 +18,9 @@ const Maps = () => {
   const router = useRouter();
   const { user, loading } = useAuth();
   const [userRooms, setUserRooms] = useState<MapRoom[]>([]);
+  const [roomPermissions, setRoomPermissions] = useState<
+    Record<string, "owner" | "editor" | "viewer" | null>
+  >({});
   const [mapsLoading, setMapsLoading] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -28,29 +31,80 @@ const Maps = () => {
     if (user) {
       setMapsLoading(true);
       try {
-        const userId = user.email || user.uid;
-        const idToken = await user.getIdToken();
-
-        // Use the new method that fetches from both local and server
-        const allUserRooms = await RoomService.getAllUserRooms(userId, idToken);
+        // Use the new method that fetches from Liveblocks
+        const allUserRooms = await RoomService.getAllUserRooms();
         setUserRooms(allUserRooms);
+
+        // Load permissions for each room
+        const permissions: Record<
+          string,
+          "owner" | "editor" | "viewer" | null
+        > = {};
+        const userId = user.email || user.uid;
+
+        for (const room of allUserRooms) {
+          try {
+            permissions[room.id] = await RoomService.getUserPermission(
+              room.id,
+              userId
+            );
+          } catch (error) {
+            console.error(
+              `Error loading permission for room ${room.id}:`,
+              error
+            );
+            permissions[room.id] = null;
+          }
+        }
+
+        setRoomPermissions(permissions);
       } catch (error) {
         console.error("Error loading user rooms:", error);
 
-        // Fallback to local rooms only
-        const roomsByUid = RoomService.getUserRooms(user.uid);
-        const roomsByEmail = user.email
-          ? RoomService.getUserRoomsByEmail(user.email)
-          : [];
+        // Fallback to local methods (though these now also use Liveblocks)
+        try {
+          const roomsByUid = await RoomService.getUserRooms(user.uid);
+          const roomsByEmail = user.email
+            ? await RoomService.getUserRoomsByEmail(user.email)
+            : [];
 
-        // Combine and deduplicate rooms
-        const allUserRooms = [...roomsByUid, ...roomsByEmail];
-        const uniqueRooms = allUserRooms.filter(
-          (room, index, self) =>
-            index === self.findIndex((r) => r.id === room.id)
-        );
+          // Combine and deduplicate rooms
+          const allUserRooms = [...roomsByUid, ...roomsByEmail];
+          const uniqueRooms = allUserRooms.filter(
+            (room, index, self) =>
+              index === self.findIndex((r) => r.id === room.id)
+          );
 
-        setUserRooms(uniqueRooms);
+          setUserRooms(uniqueRooms);
+
+          // Load permissions for fallback rooms as well
+          const permissions: Record<
+            string,
+            "owner" | "editor" | "viewer" | null
+          > = {};
+          const userId = user.email || user.uid;
+
+          for (const room of uniqueRooms) {
+            try {
+              permissions[room.id] = await RoomService.getUserPermission(
+                room.id,
+                userId
+              );
+            } catch (error) {
+              console.error(
+                `Error loading permission for room ${room.id}:`,
+                error
+              );
+              permissions[room.id] = null;
+            }
+          }
+
+          setRoomPermissions(permissions);
+        } catch (fallbackError) {
+          console.error("Fallback error:", fallbackError);
+          setUserRooms([]);
+          setRoomPermissions({});
+        }
       } finally {
         setMapsLoading(false);
       }
@@ -89,6 +143,11 @@ const Maps = () => {
 
   const handleMapUpdated = async () => {
     await loadUserRooms(); // Refresh the rooms list
+  };
+
+  const handleMapDeleted = async () => {
+    await loadUserRooms(); // Refresh the rooms list
+    setSelectedRoom(null); // Clear the selected room
   };
 
   if (loading) {
@@ -162,27 +221,23 @@ const Maps = () => {
                 />
 
                 {/* Invite button - only show for room owners */}
-                {user &&
-                  RoomService.getUserPermission(
-                    room.id,
-                    user.email || user.uid
-                  ) === "owner" && (
-                    <div className="absolute right-2 top-2 gap-1 grid place-items-center grid-cols-2 py-1 md:py-2 mt-2 rounded-xl px-1 md:px-2 duration-300 bg-black/50 group-hover:opacity-100 opacity-0">
-                      <button
-                        onClick={(e) => handleInviteClick(e, room)}
-                        className="cursor-pointer bg-primary text-background px-2 md:px-3 py-1 rounded-md text-xs md:text-sm transition-opacity hover:bg-secondary"
-                        title="Invite collaborators"
-                      >
-                        Invite
-                      </button>
-                      <button
-                        onClick={(e) => handleEditClick(e, room)}
-                        className="cursor-pointer bg-primary text-background px-2 md:px-3 py-1 rounded-md text-xs md:text-sm transition-opacity hover:bg-secondary"
-                      >
-                        Edit
-                      </button>
-                    </div>
-                  )}
+                {user && roomPermissions[room.id] === "owner" && (
+                  <div className="absolute right-2 top-2 gap-1 grid place-items-center grid-cols-2 py-1 md:py-2 mt-2 rounded-xl px-1 md:px-2 duration-300 bg-black/50 group-hover:opacity-100 opacity-0">
+                    <button
+                      onClick={(e) => handleInviteClick(e, room)}
+                      className="cursor-pointer bg-primary text-background px-2 md:px-3 py-1 rounded-md text-xs md:text-sm transition-opacity hover:bg-secondary"
+                      title="Invite collaborators"
+                    >
+                      Invite
+                    </button>
+                    <button
+                      onClick={(e) => handleEditClick(e, room)}
+                      className="cursor-pointer bg-primary text-background px-2 md:px-3 py-1 rounded-md text-xs md:text-sm transition-opacity hover:bg-secondary"
+                    >
+                      Edit
+                    </button>
+                  </div>
+                )}
 
                 <div
                   className="px-2 md:px-4 absolute bottom-0 bg-black/50 rounded-b-[20px] text-secondary left-0 w-full h-2/5 flex flex-col items-start justify-center"
@@ -207,15 +262,10 @@ const Maps = () => {
                     {room.description}
                   </p>
                   {user &&
-                    RoomService.getUserPermission(
-                      room.id,
-                      user.email || user.uid
-                    ) !== "owner" && (
+                    roomPermissions[room.id] !== "owner" &&
+                    roomPermissions[room.id] && (
                       <p className="text-xs opacity-75">
-                        {RoomService.getUserPermission(
-                          room.id,
-                          user.email || user.uid
-                        ) === "editor"
+                        {roomPermissions[room.id] === "editor"
                           ? "Can edit"
                           : "View only"}
                       </p>
@@ -267,6 +317,7 @@ const Maps = () => {
           }}
           room={selectedRoom}
           onMapUpdated={handleMapUpdated}
+          onMapDeleted={handleMapDeleted}
         />
       )}
     </div>

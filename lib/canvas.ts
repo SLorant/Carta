@@ -25,7 +25,6 @@ export const configureFreeDrawingBrush = (
   }
 ) => {
   const brush = canvas.freeDrawingBrush;
-  console.log(settings, brush);
 
   // Convert color to RGBA if opacity is provided
   let brushColor = settings.color;
@@ -85,6 +84,26 @@ const createContinentalBrush = (
   }
 };
 
+// Helper function to reorder all objects on canvas based on their z-index
+const reorderObjectsByZIndex = (canvas: fabric.Canvas) => {
+  const objects = canvas.getObjects();
+
+  // Sort all objects by z-index
+  objects.sort((a, b) => {
+    const aZIndex = (a as fabric.Object & { zIndex?: number }).zIndex || 0;
+    const bZIndex = (b as fabric.Object & { zIndex?: number }).zIndex || 0;
+    return aZIndex - bZIndex;
+  });
+
+  // Reorder objects on canvas based on sorted z-index
+  objects.forEach((obj, targetIndex) => {
+    const currentIndex = canvas.getObjects().indexOf(obj);
+    if (currentIndex !== targetIndex) {
+      canvas.moveTo(obj, targetIndex);
+    }
+  });
+};
+
 // initialize fabric canvas
 export const initializeFabric = ({
   fabricRef,
@@ -137,6 +156,7 @@ export const handleCanvasMouseDown = ({
   lastPanPoint,
   syncShapeInStorage,
   setActiveElement,
+  brushSettings,
 }: CanvasMouseDown) => {
   const evt = options.e as MouseEvent;
 
@@ -175,7 +195,6 @@ export const handleCanvasMouseDown = ({
 
   // set canvas drawing mode to false
   canvas.isDrawingMode = false;
-  console.log(selectedShapeRef, canvas);
 
   // if selected shape is freeform or color, set drawing mode to true and return
   if (
@@ -186,7 +205,6 @@ export const handleCanvasMouseDown = ({
     canvas.isDrawingMode = true;
 
     // Configure the brush with current settings including opacity
-    const brushSettings = (options as any).brushSettings;
     if (brushSettings) {
       configureFreeDrawingBrush(canvas, brushSettings);
     }
@@ -255,6 +273,9 @@ export const handleCanvasMouseDown = ({
       const newIndex = objects.length - 1;
       (img as unknown as fabric.Object & { zIndex: number }).zIndex = newIndex;
 
+      // Reorder objects to maintain proper z-index layering
+      reorderObjectsByZIndex(canvas);
+
       // Sync to storage and render
       syncShapeInStorage(img);
       canvas.renderAll();
@@ -280,6 +301,9 @@ export const handleCanvasMouseDown = ({
     const objects = canvas.getObjects();
     const newIndex = objects.length - 1;
     (shapeRef.current as fabric.Object & { zIndex: number }).zIndex = newIndex;
+
+    // Reorder objects to maintain proper z-index layering
+    reorderObjectsByZIndex(canvas);
 
     // Now sync to storage and render
     syncShapeInStorage(shapeRef.current);
@@ -322,6 +346,9 @@ export const handleCanvasMouseDown = ({
       const newIndex = objects.length - 1;
       (shapeRef.current as fabric.Object & { zIndex: number }).zIndex =
         newIndex;
+
+      // Reorder objects to maintain proper z-index layering
+      reorderObjectsByZIndex(canvas);
     }
   } else {
     // In selection mode, clicking on empty area should clear selection
@@ -549,7 +576,7 @@ export const handlePathCreated = ({
 
     // Path is already added to canvas automatically by fabric.js, no need to add it again
 
-    // Get the highest z-index among existing color paths to maintain proper layering
+    // Get existing color paths to maintain proper layering among color objects
     const existingColorPaths = canvas
       .getObjects()
       .filter(
@@ -558,9 +585,10 @@ export const handlePathCreated = ({
           "color-layer"
       );
 
+    // Find the highest z-index among existing color paths
     let colorZIndex = -1000; // Start with base low z-index for first color stroke
     if (existingColorPaths.length > 1) {
-      // More than just the current path
+      // More than just the current path - find the max z-index among existing color paths
       const maxColorZIndex = Math.max(
         ...existingColorPaths
           .filter((obj: fabric.Object) => obj !== path) // Exclude the current path
@@ -569,16 +597,15 @@ export const handlePathCreated = ({
               (obj as fabric.Object & { zIndex: number }).zIndex || -1000
           )
       );
-      colorZIndex = maxColorZIndex + 1; // Place new stroke above previous ones
+      colorZIndex = maxColorZIndex + 1; // Place new stroke above previous color strokes
     }
 
+    // Set the z-index for the new path
     (path as fabric.Object & { zIndex: number }).zIndex = colorZIndex;
 
-    // Only send to back if it's the first color stroke
-    if (existingColorPaths.length === 1) {
-      // Only the current path exists
-      canvas.sendToBack(path);
-    }
+    // Reorder objects to ensure proper layering based on z-index
+    reorderObjectsByZIndex(canvas);
+
     canvas.renderAll();
 
     // sync the individual path in storage
@@ -663,8 +690,6 @@ export const handleCanvasSelectionCreated = ({
     return;
   }
 
-  console.log(selectedShapeRef);
-
   // Switch to select tool when an object is selected
   // TODO make this work
   /*   selectedShapeRef.current = null;
@@ -680,8 +705,6 @@ export const handleCanvasSelectionCreated = ({
     fontFamily: string;
     fontWeight: string;
   };
-
-  console.log(selectedElement);
 
   // if only one element is selected, set element attributes
   if (selectedElement && options.selected.length === 1) {
@@ -764,11 +787,6 @@ export const renderCanvas = ({
   canvasObjects,
   activeObjectRef,
 }: RenderCanvas) => {
-  console.log(
-    "renderCanvas called, canvasObjects size:",
-    (canvasObjects as Map<string, unknown>)?.size
-  );
-
   // Safety check: ensure canvas is initialized
   if (!fabricRef.current) {
     console.log("Canvas not initialized yet, skipping render");
@@ -895,18 +913,31 @@ export const renderCanvas = ({
             fabricRef.current?.setActiveObject(enlivenedObj);
           }
 
-          // Restore zIndex from storage if it exists
+          // Restore zIndex from storage if it exists, but ensure color layers stay negative
           const storedZIndex = (
             objectData as unknown as Record<string, unknown>
           ).zIndex as number | undefined;
           if (storedZIndex !== undefined) {
-            (enlivenedObj as fabric.Object & { zIndex: number }).zIndex =
-              storedZIndex;
+            if (actualObjectId === "color-layer") {
+              // Ensure color layers always have negative z-index
+              (enlivenedObj as fabric.Object & { zIndex: number }).zIndex =
+                storedZIndex < 0 ? storedZIndex : -1000 + storedZIndex;
+            } else {
+              (enlivenedObj as fabric.Object & { zIndex: number }).zIndex =
+                storedZIndex;
+            }
           } else {
             // Assign z-index based on the current position if not in storage
             const currentIndex = fabricRef.current?.getObjects().length ?? 0;
-            (enlivenedObj as fabric.Object & { zIndex: number }).zIndex =
-              currentIndex;
+            if (actualObjectId === "color-layer") {
+              // Color layers get negative z-index
+              (enlivenedObj as fabric.Object & { zIndex: number }).zIndex =
+                -1000 + currentIndex;
+            } else {
+              // Regular objects get positive z-index
+              (enlivenedObj as fabric.Object & { zIndex: number }).zIndex =
+                currentIndex;
+            }
           }
 
           // Restore premadeName from storage if it exists
@@ -926,6 +957,11 @@ export const renderCanvas = ({
       "fabric"
     );
   });
+
+  // Reorder all objects based on their z-index after rendering
+  if (fabricRef.current) {
+    reorderObjectsByZIndex(fabricRef.current);
+  }
 
   fabricRef.current?.renderAll();
 };
@@ -1010,6 +1046,7 @@ export const updateBrushSettings = (
     color: string;
     texture: string;
     roughness: number;
+    opacity?: number;
   }
 ) => {
   if (canvas.isDrawingMode) {

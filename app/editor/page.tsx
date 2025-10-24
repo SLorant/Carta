@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import Live from "@/components/Live";
 import { fabric } from "fabric";
@@ -115,7 +115,6 @@ function EditorContent() {
 
   const deleteShapeFromStorage = useMutation(({ storage }, objectId) => {
     const canvasObjects = storage.get("canvasObjects") as LiveMap<string, Lson>;
-    console.log(canvasObjects);
     canvasObjects.delete(objectId);
   }, []);
 
@@ -128,7 +127,6 @@ function EditorContent() {
       ) {
         handleDelete(fabricRef.current, deleteShapeFromStorage);
         setActiveElement(defaultNavElement);
-        console.log("delete");
       }
     };
 
@@ -154,62 +152,71 @@ function EditorContent() {
     // The old approach was preparing one instance, but now we create fresh ones each time
   };
 
-  const handleActiveElement = (elem: ActiveElement) => {
-    setActiveElement(elem);
+  const handleActiveElement = useCallback(
+    (elem: ActiveElement) => {
+      setActiveElement(elem);
 
-    // Handle delete case first, before clearing selection
-    if (elem?.value === "delete") {
-      if (fabricRef.current) {
-        handleDelete(fabricRef.current, deleteShapeFromStorage);
-        setActiveElement(defaultNavElement);
+      // Handle delete case first, before clearing selection
+      if (elem?.value === "delete") {
+        if (fabricRef.current) {
+          handleDelete(fabricRef.current, deleteShapeFromStorage);
+          setActiveElement(defaultNavElement);
+        }
+        return;
       }
-      return;
-    }
 
-    // Clear all references and canvas selection when switching tools
-    activeObjectRef.current = null;
-    selectedShapeRef.current = null;
-    shapeRef.current = null;
+      // Clear all references and canvas selection when switching tools
+      activeObjectRef.current = null;
+      selectedShapeRef.current = null;
+      shapeRef.current = null;
 
-    // Clear canvas selection if switching to a creation tool or select tool
-    if (fabricRef.current) {
-      fabricRef.current.discardActiveObject();
-      fabricRef.current.renderAll();
-    }
+      // Disable drawing mode immediately when switching tools to prevent "fake" strokes
+      if (fabricRef.current) {
+        fabricRef.current.discardActiveObject();
+        fabricRef.current.renderAll();
+      }
 
-    switch (elem?.value) {
-      case "reset":
-        deleteAllShapes();
-        fabricRef.current?.clear();
-        setActiveElement(defaultNavElement);
-        break;
-      case "image":
-        imageInputRef.current?.click();
-        isDrawing.current = false;
-        if (fabricRef.current) {
-          fabricRef.current.isDrawingMode = false;
-        }
-        // Don't set selectedShapeRef for images - they're handled differently
-        selectedShapeRef.current = null;
-        return; // Return early to avoid setting selectedShapeRef at the end
-      case "premade-shapes":
-        setIsPremadeShapesModalOpen(true);
-        isDrawing.current = false;
-        if (fabricRef.current) {
-          fabricRef.current.isDrawingMode = false;
-        }
-        // Don't set selectedShapeRef for premade shapes - they're handled differently
-        selectedShapeRef.current = null;
-        return; // Return early to avoid setting selectedShapeRef at the end
-      default:
-        break;
-    }
+      switch (elem?.value) {
+        case "select":
+          isDrawing.current = false;
+          if (fabricRef.current) {
+            fabricRef.current.isDrawingMode = false;
+          }
+          break;
+        case "reset":
+          deleteAllShapes();
+          fabricRef.current?.clear();
+          setActiveElement(defaultNavElement);
+          break;
+        case "image":
+          imageInputRef.current?.click();
+          isDrawing.current = false;
+          if (fabricRef.current) {
+            fabricRef.current.isDrawingMode = false;
+          }
+          // Don't set selectedShapeRef for images - they're handled differently
+          selectedShapeRef.current = null;
+          return; // Return early to avoid setting selectedShapeRef at the end
+        case "premade-shapes":
+          setIsPremadeShapesModalOpen(true);
+          isDrawing.current = false;
+          if (fabricRef.current) {
+            fabricRef.current.isDrawingMode = false;
+          }
+          // Don't set selectedShapeRef for premade shapes - they're handled differently
+          selectedShapeRef.current = null;
+          return; // Return early to avoid setting selectedShapeRef at the end
+        default:
+          break;
+      }
 
-    // Set the selected shape reference based on the tool
-    // For select tool, set to null to enable pure selection mode
-    selectedShapeRef.current =
-      elem?.value === "select" ? null : (elem?.value as string);
-  };
+      // Set the selected shape reference based on the tool
+      // For select tool, set to null to enable pure selection mode
+      selectedShapeRef.current =
+        elem?.value === "select" ? null : (elem?.value as string);
+    },
+    [deleteAllShapes, deleteShapeFromStorage]
+  );
 
   const canvasObjects = useStorage((root) => root.canvasObjects);
 
@@ -254,8 +261,41 @@ function EditorContent() {
   const [isCanvasInitialized, setIsCanvasInitialized] = useState(false);
 
   useEffect(() => {
-    console.log("useEffect running, canvasRef:", canvasRef);
+    if (fabricRef.current) {
+      fabricRef.current.on("mouse:down", (options) => {
+        // Handle canvas interactions including panning with middle mouse button
+        if (fabricRef.current) {
+          handleCanvasMouseDown({
+            canvas: fabricRef.current,
+            options,
+            isDrawing,
+            shapeRef,
+            selectedShapeRef,
+            activeObjectRef,
+            isPanning,
+            lastPanPoint,
+            syncShapeInStorage,
+            setActiveElement: handleActiveElement,
+            brushSettings: {
+              width: parseInt(elementAttributes.brushWidth),
+              color: elementAttributes.brushColor,
+              texture: elementAttributes.brushTexture,
+              roughness: parseInt(elementAttributes.brushRoughness),
+              opacity: parseFloat(elementAttributes.opacity),
+            },
+          });
+        }
+      });
+    }
+  }, [
+    deleteShapeFromStorage,
+    redo,
+    syncShapeInStorage,
+    undo,
+    elementAttributes,
+  ]);
 
+  useEffect(() => {
     // Use setTimeout to wait for the next tick when the DOM is ready
     const timeoutId = setTimeout(() => {
       if (!canvasRef.current) {
@@ -398,6 +438,8 @@ function EditorContent() {
     redo,
     syncShapeInStorage,
     undo,
+    /*  elementAttributes, */
+    /* handleActiveElement, */
     /*     elementAttributes.brushWidth,
     elementAttributes.brushColor,
     elementAttributes.brushTexture,
@@ -456,7 +498,12 @@ function EditorContent() {
         handleZoomOut={handleZoomOutCanvas}
         handleZoomReset={handleZoomResetCanvas}
       />
-      <Live canvasRef={canvasRef} fabricRef={fabricRef} undo={undo} redo={redo} />
+      <Live
+        canvasRef={canvasRef}
+        fabricRef={fabricRef}
+        undo={undo}
+        redo={redo}
+      />
       <RightSideBar
         elementAttributes={elementAttributes}
         activeObjectRef={activeObjectRef}

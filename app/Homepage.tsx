@@ -3,7 +3,6 @@ import React, { useEffect, useState } from "react";
 import Modal from "./Modal";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/firebase.config";
-import { PrimaryButton } from "@/components/general/Button";
 import BackgroundBlur from "@/components/BackgroundBlur";
 import { useUserProfile } from "@/hooks/useUserProfile";
 
@@ -37,12 +36,7 @@ const Homepage = () => {
   useEffect(() => {
     onAuthStateChanged(auth, (user) => {
       if (user) {
-        // https://firebase.google.com/docs/reference/js/firebase.User
-        const uid = user.uid;
         setUserName(profile?.username || (user.email ?? ""));
-        console.log("uid", uid);
-      } else {
-        console.log("user is logged out");
       }
     });
   }, [profile?.username]);

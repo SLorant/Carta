@@ -4,6 +4,7 @@ import React, { useMemo, useState, useEffect } from "react";
 import { MapRoom } from "@/lib/roomService";
 import Avatar from "./Avatar";
 import { getUserProfileByIdOrEmail, UserProfile } from "@/lib/profileService";
+import { useAuth } from "../AuthProvider";
 
 interface RoomUsersProps {
   room: MapRoom;
@@ -13,6 +14,7 @@ interface RoomUsersProps {
 const RoomUsers = ({ room, onClick }: RoomUsersProps) => {
   const [userProfiles, setUserProfiles] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
   // Get all user IDs from room permissions
   const userIds = useMemo(() => {
@@ -114,12 +116,15 @@ const RoomUsers = ({ room, onClick }: RoomUsersProps) => {
           />
         ))}
 
-        <button
-          className="cursor-pointer w-10 h-10 flex items-center justify-center rounded-full bg-gray-600 text-white text-md"
-          onClick={onClick}
-        >
-          +
-        </button>
+        {user &&
+          (user.email === room.createdBy || user.uid === room.createdBy) && (
+            <button
+              className="cursor-pointer w-10 h-10 flex items-center justify-center rounded-full bg-gray-600 text-white text-md"
+              onClick={onClick}
+            >
+              +
+            </button>
+          )}
       </>
     );
   }, [userProfiles, loading, onClick]);

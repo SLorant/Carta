@@ -44,8 +44,6 @@ const Layers = ({
       }
     });
 
-    console.log(zIndexMap);
-
     // Filter out individual color layer paths and create a single color layer entry
     const filteredShapes = allShapes.filter(([, shape]) => {
       return shape?.objectId !== "color-layer";
@@ -118,6 +116,12 @@ const Layers = ({
         return;
       }
 
+      // Don't allow dropping on or moving color layers
+      if (draggedLayer === "color-layer" || targetObjectId === "color-layer") {
+        setDraggedLayer(null);
+        return;
+      }
+
       const canvas = fabricRef.current;
       const draggedObject = canvas
         .getObjects()
@@ -137,23 +141,47 @@ const Layers = ({
       // Move the dragged object to the target position
       canvas.moveTo(draggedObject, targetIndex);
 
+      // Get all color layer objects and preserve their current order
+      const colorObjects = canvas
+        .getObjects()
+        .filter((obj) => getObjectId(obj) === "color-layer");
+
+      // Sort color objects by their current z-index to preserve drawing order
+      colorObjects.sort((a, b) => {
+        const aZIndex =
+          (a as fabric.Object & { zIndex?: number }).zIndex || -1000;
+        const bZIndex =
+          (b as fabric.Object & { zIndex?: number }).zIndex || -1000;
+        return aZIndex - bZIndex;
+      });
+
+      // Instead of using sendToBack (which reverses order), use moveTo to preserve order
+      colorObjects.forEach((obj, index) => {
+        canvas.moveTo(obj, index);
+      });
+
       // Update z-index for all objects after reordering
-      canvas.getObjects().forEach((obj, index) => {
+      const allObjects = canvas.getObjects();
+      const colorObjectsAfter = allObjects.filter(
+        (obj) => getObjectId(obj) === "color-layer"
+      );
+      const nonColorObjectsAfter = allObjects.filter(
+        (obj) => getObjectId(obj) !== "color-layer"
+      );
+
+      // Assign z-indexes: color objects get negative values, non-color get positive
+      colorObjectsAfter.forEach((obj, index) => {
+        (obj as fabric.Object & { zIndex: number }).zIndex = -1000 + index;
+        syncShapeInStorage(obj);
+      });
+
+      nonColorObjectsAfter.forEach((obj, index) => {
         (obj as fabric.Object & { zIndex: number }).zIndex = index;
-        // Sync each object to storage to persist the new z-index
         syncShapeInStorage(obj);
       });
 
       // Re-render the canvas
       canvas.renderAll();
-
-      console.log(
-        "After reorder - Canvas order:",
-        canvas.getObjects().map((obj) => ({
-          id: getObjectId(obj),
-          zIndex: (obj as fabric.Object & { zIndex?: number }).zIndex,
-        }))
-      );
 
       setDraggedLayer(null);
     },
@@ -237,24 +265,9 @@ const Layers = ({
 
       const canvas = fabricRef.current;
 
-      // Special handling for color layer - move all color paths
+      // Special handling for color layer - color layers should stay at bottom
       if (objectId === "color-layer") {
-        const colorObjects = canvas
-          .getObjects()
-          .filter((obj) => getObjectId(obj) === "color-layer");
-
-        colorObjects.forEach((obj) => {
-          canvas.bringToFront(obj);
-        });
-
-        // Update z-index for all objects after reordering
-        canvas.getObjects().forEach((obj, index) => {
-          (obj as fabric.Object & { zIndex: number }).zIndex = index;
-          syncShapeInStorage(obj);
-        });
-
-        canvas.renderAll();
-        return;
+        return; // Don't allow moving color layers to front
       }
 
       const targetObject = canvas
@@ -264,10 +277,42 @@ const Layers = ({
       if (targetObject) {
         canvas.bringToFront(targetObject);
 
+        // Get all color layer objects and preserve their current order
+        const colorObjects = canvas
+          .getObjects()
+          .filter((obj) => getObjectId(obj) === "color-layer");
+
+        // Sort color objects by their current z-index to preserve drawing order
+        colorObjects.sort((a, b) => {
+          const aZIndex =
+            (a as fabric.Object & { zIndex?: number }).zIndex || -1000;
+          const bZIndex =
+            (b as fabric.Object & { zIndex?: number }).zIndex || -1000;
+          return aZIndex - bZIndex;
+        });
+
+        // Instead of using sendToBack (which reverses order), use moveTo to preserve order
+        colorObjects.forEach((obj, index) => {
+          canvas.moveTo(obj, index);
+        });
+
         // Update z-index for all objects after reordering
-        canvas.getObjects().forEach((obj, index) => {
+        const allObjects = canvas.getObjects();
+        const colorObjectsAfter = allObjects.filter(
+          (obj) => getObjectId(obj) === "color-layer"
+        );
+        const nonColorObjectsAfter = allObjects.filter(
+          (obj) => getObjectId(obj) !== "color-layer"
+        );
+
+        // Assign z-indexes: color objects get negative values, non-color get positive
+        colorObjectsAfter.forEach((obj, index) => {
+          (obj as fabric.Object & { zIndex: number }).zIndex = -1000 + index;
+          syncShapeInStorage(obj);
+        });
+
+        nonColorObjectsAfter.forEach((obj, index) => {
           (obj as fabric.Object & { zIndex: number }).zIndex = index;
-          // Sync each object to storage to persist the new z-index
           syncShapeInStorage(obj);
         });
 
@@ -285,24 +330,9 @@ const Layers = ({
 
       const canvas = fabricRef.current;
 
-      // Special handling for color layer - move all color paths to back
+      // Special handling for color layer - color layers are always at the bottom, so do nothing
       if (objectId === "color-layer") {
-        const colorObjects = canvas
-          .getObjects()
-          .filter((obj) => getObjectId(obj) === "color-layer");
-
-        colorObjects.forEach((obj) => {
-          canvas.sendToBack(obj);
-        });
-
-        // Update z-index for all objects after reordering
-        canvas.getObjects().forEach((obj, index) => {
-          (obj as fabric.Object & { zIndex: number }).zIndex = index;
-          syncShapeInStorage(obj);
-        });
-
-        canvas.renderAll();
-        return;
+        return; // Color layers should always remain at the bottom
       }
 
       const targetObject = canvas
@@ -310,12 +340,45 @@ const Layers = ({
         .find((obj) => getObjectId(obj) === objectId);
 
       if (targetObject) {
+        // Move the target object to back, but not below color layers
         canvas.sendToBack(targetObject);
 
+        // Get all color layer objects and preserve their current order
+        const colorObjects = canvas
+          .getObjects()
+          .filter((obj) => getObjectId(obj) === "color-layer");
+
+        // Sort color objects by their current z-index to preserve drawing order
+        colorObjects.sort((a, b) => {
+          const aZIndex =
+            (a as fabric.Object & { zIndex?: number }).zIndex || -1000;
+          const bZIndex =
+            (b as fabric.Object & { zIndex?: number }).zIndex || -1000;
+          return aZIndex - bZIndex;
+        });
+
+        // Instead of using sendToBack (which reverses order), use moveTo to preserve order
+        colorObjects.forEach((obj, index) => {
+          canvas.moveTo(obj, index);
+        });
+
         // Update z-index for all objects after reordering
-        canvas.getObjects().forEach((obj, index) => {
+        const allObjects = canvas.getObjects();
+        const colorObjectsAfter = allObjects.filter(
+          (obj) => getObjectId(obj) === "color-layer"
+        );
+        const nonColorObjectsAfter = allObjects.filter(
+          (obj) => getObjectId(obj) !== "color-layer"
+        );
+
+        // Assign z-indexes: color objects get negative values, non-color get positive
+        colorObjectsAfter.forEach((obj, index) => {
+          (obj as fabric.Object & { zIndex: number }).zIndex = -1000 + index;
+          syncShapeInStorage(obj);
+        });
+
+        nonColorObjectsAfter.forEach((obj, index) => {
           (obj as fabric.Object & { zIndex: number }).zIndex = index;
-          // Sync each object to storage to persist the new z-index
           syncShapeInStorage(obj);
         });
 
@@ -401,23 +464,35 @@ const Layers = ({
 
                   {/* Layer actions */}
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 duration-200">
-                    {/* Move to front */}
-                    <button
-                      onClick={(e) => handleMoveToFront(objectId, e)}
-                      className="p-1 hover:bg-gray-200 rounded text-xs"
-                      title="Bring to front"
-                    >
-                      ↑
-                    </button>
+                    {objectId !== "color-layer" && (
+                      <>
+                        {/* Move to front */}
+                        <button
+                          onClick={(e) => handleMoveToFront(objectId, e)}
+                          className="p-1 hover:bg-gray-200 rounded text-xs"
+                          title="Bring to front"
+                        >
+                          ↑
+                        </button>
 
-                    {/* Move to back */}
-                    <button
-                      onClick={(e) => handleMoveToBack(objectId, e)}
-                      className="p-1 hover:bg-gray-200 rounded text-xs"
-                      title="Send to back"
-                    >
-                      ↓
-                    </button>
+                        {/* Move to back */}
+                        <button
+                          onClick={(e) => handleMoveToBack(objectId, e)}
+                          className="p-1 hover:bg-gray-200 rounded text-xs"
+                          title="Send to back"
+                        >
+                          ↓
+                        </button>
+                      </>
+                    )}
+                    {objectId === "color-layer" && (
+                      <span
+                        className="text-xs opacity-50 px-2"
+                        title="Color layer is always at the bottom"
+                      >
+                        Bottom Layer
+                      </span>
+                    )}
                   </div>
 
                   {/* Visibility toggle */}

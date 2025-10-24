@@ -52,9 +52,12 @@ export async function POST(request: Request) {
       permissions: Object.entries(room.usersAccesses || {}).map(
         ([userId, permissions]) => ({
           userId,
-          role: (permissions as string[]).includes("room:write")
-            ? "editor"
-            : ("viewer" as "owner" | "editor" | "viewer"),
+          role:
+            userId === room.metadata?.createdBy
+              ? ("owner" as "owner" | "editor" | "viewer")
+              : (permissions as string[]).includes("room:write")
+              ? ("editor" as "owner" | "editor" | "viewer")
+              : ("viewer" as "owner" | "editor" | "viewer"),
         })
       ),
     }));

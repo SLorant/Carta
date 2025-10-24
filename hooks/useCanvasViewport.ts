@@ -68,7 +68,6 @@ export const useCanvasViewport = (
    */
   const transformScreenToCanvas = (screenX: number, screenY: number) => {
     const canvas = fabricRef.current;
-    console.log(screenX, screenY);
     if (!canvas) return { x: screenX, y: screenY };
 
     const zoom = canvas.getZoom();

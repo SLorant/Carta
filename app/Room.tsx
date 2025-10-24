@@ -14,8 +14,6 @@ interface RoomProps {
 export function Room({ children, roomId }: RoomProps) {
   const { user } = useAuth();
 
-  console.log(user);
-
   if (!user) {
     return <LoadingScreen message="Please log in to access this room." />;
   }

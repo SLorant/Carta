@@ -30,7 +30,6 @@ export interface UserProfile {
 
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
   try {
-    console.log("Getting user profile for UID:", uid);
     const docRef = doc(db, "users", uid);
     const docSnap = await getDoc(docRef);
 
@@ -47,7 +46,6 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
         updatedAt: data.updatedAt?.toDate() || new Date(),
       };
     } else {
-      console.log("No user profile found for UID:", uid);
       return null;
     }
   } catch (error) {
@@ -60,7 +58,6 @@ export async function getUserProfileByEmail(
   email: string
 ): Promise<UserProfile | null> {
   try {
-    console.log("Getting user profile for email:", email);
     const usersRef = collection(db, "users");
     const q = query(usersRef, where("email", "==", email));
     const querySnapshot = await getDocs(q);
@@ -79,7 +76,7 @@ export async function getUserProfileByEmail(
         updatedAt: data.updatedAt?.toDate() || new Date(),
       };
     } else {
-      console.log("No user profile found for email:", email);
+      console.error("No user profile found for email:", email);
       return null;
     }
   } catch (error) {
@@ -107,7 +104,6 @@ export async function getUserProfileByIdOrEmail(
 
 export async function saveUserProfile(profile: UserProfile): Promise<void> {
   try {
-    console.log("Saving user profile:", profile);
     const docRef = doc(db, "users", profile.uid);
 
     // Filter out undefined values to avoid Firestore errors
@@ -122,7 +118,6 @@ export async function saveUserProfile(profile: UserProfile): Promise<void> {
     };
 
     await setDoc(docRef, profileData, { merge: true });
-    console.log("User profile saved successfully");
   } catch (error) {
     console.error("Error saving user profile:", error);
     throw error;
@@ -215,8 +210,6 @@ export async function uploadProfilePicture(
 
     const storageRef = ref(storage, `profile-pictures/${uid}/${fileName}`);
 
-    console.log("Uploading file to:", `profile-pictures/${uid}/${fileName}`);
-
     // Upload with metadata
     const metadata = {
       contentType: file.type,
@@ -229,7 +222,6 @@ export async function uploadProfilePicture(
     const snapshot = await uploadBytes(storageRef, file, metadata);
     const downloadURL = await getDownloadURL(snapshot.ref);
 
-    console.log("File uploaded successfully, download URL:", downloadURL);
     return downloadURL;
   } catch (error) {
     console.error("Error uploading profile picture:", error);
@@ -247,7 +239,6 @@ export async function deleteProfilePicture(downloadURL: string): Promise<void> {
       const path = decodeURIComponent(pathMatch[1]);
       const storageRef = ref(storage, path);
       await deleteObject(storageRef);
-      console.log("Profile picture deleted successfully");
     } else {
       console.warn("Could not extract path from URL:", downloadURL);
     }

@@ -141,8 +141,6 @@ const Live = ({ canvasRef, fabricRef, undo, redo }: Props) => {
         setCursorState({
           mode: CursorMode.ReactionSelector,
         });
-      } else if (event.key === "Delete") {
-        console.log("delete");
       }
     };
     const onKeyDown = (event: KeyboardEvent) => {

@@ -18,16 +18,13 @@ const Modal = ({ type, onClose, setModal, router }) => {
   const onLogin = (e) => {
     e.preventDefault();
     signInWithEmailAndPassword(auth, email, password)
-      .then((userCredential) => {
-        // Signed in
-        const user = userCredential.user;
+      .then(() => {
         router.push("/maps");
-        console.log(user);
       })
       .catch((error) => {
         const errorCode = error.code;
         const errorMessage = error.message;
-        console.log(errorCode, errorMessage);
+        console.error(errorCode, errorMessage);
       });
   };
 
@@ -48,19 +45,18 @@ const Modal = ({ type, onClose, setModal, router }) => {
       .then(async (userCredential) => {
         // Signed in
         const user = userCredential.user;
-        
+
         // Create user profile with username
         if (type === "register") {
           await createUserProfileOnRegistration(user.uid, email, username);
         }
-        
-        console.log(user);
+
         router.push("/maps");
       })
       .catch((error) => {
         const errorCode = error.code;
         const errorMessage = error.message;
-        console.log(errorCode, errorMessage);
+        console.error(errorCode, errorMessage);
       });
   };
 

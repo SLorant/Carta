@@ -192,12 +192,10 @@ export const NewThread = ({ children }: Props) => {
           // Convert screen coordinates (relative to canvas element) to canvas coordinates
           /*  x = (x - vpt[4]) / zoom / 10;
           y = (y - vpt[5]) / zoom / 10; */
-          console.log(x, y, zoom);
           x += zoom / 10;
           y += zoom / 10;
         }
       }
-      console.log(x, y);
       // create a new thread with the composer coords and cursor selectors
       createThread({
         body,

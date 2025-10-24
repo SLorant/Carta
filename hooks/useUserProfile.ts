@@ -19,7 +19,6 @@ export function useUserProfile() {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      console.log("Auth state changed:", firebaseUser?.uid);
       setUser(firebaseUser);
 
       if (firebaseUser) {
@@ -28,7 +27,6 @@ export function useUserProfile() {
 
           // Create profile if it doesn't exist
           if (!userProfile) {
-            console.log("Creating new user profile for:", firebaseUser.uid);
             userProfile = {
               uid: firebaseUser.uid,
               email: firebaseUser.email || "",
@@ -38,7 +36,6 @@ export function useUserProfile() {
               updatedAt: new Date(),
             };
             await saveUserProfile(userProfile);
-            console.log("New user profile created");
           }
 
           setProfile(userProfile);

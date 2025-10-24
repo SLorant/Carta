@@ -149,6 +149,7 @@ export type CanvasMouseDown = {
     color: string;
     texture: string;
     roughness: number;
+    opacity?: number;
   };
 };
 

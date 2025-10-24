@@ -83,11 +83,11 @@ export const directionOptions = [
 ];
 
 export const fontFamilyOptions = [
+  { value: "Enchanted Land", label: "Enchanted Land" },
   { value: "Helvetica", label: "Helvetica" },
   { value: "Times New Roman", label: "Times New Roman" },
   { value: "Comic Sans MS", label: "Comic Sans MS" },
   { value: "Brush Script MT", label: "Brush Script MT" },
-  { value: "Enchanted Land", label: "Enchanted Land" },
 ];
 
 export const fontSizeOptions = [
