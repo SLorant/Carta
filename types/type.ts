@@ -58,8 +58,6 @@ export type Attributes = {
   opacity: string;
   brushWidth: string;
   brushColor: string;
-  brushTexture: string;
-  brushRoughness: string;
 };
 
 export type ActiveElement = {
@@ -101,7 +99,7 @@ export type PremadeShapeUpload = {
 };
 
 export type RightSidebarProps = {
-  allShapes: Array<any>;
+  allShapes: Array<fabric.Object>;
   elementAttributes: Attributes;
   setElementAttributes: React.Dispatch<React.SetStateAction<Attributes>>;
   fabricRef: React.MutableRefObject<fabric.Canvas | null>;
@@ -119,6 +117,7 @@ export type NavbarProps = {
   handleZoomIn?: () => void;
   handleZoomOut?: () => void;
   handleZoomReset?: () => void;
+  fabricRef: React.MutableRefObject<fabric.Canvas | null>;
 };
 
 export type ShapesMenuProps = {
@@ -127,16 +126,16 @@ export type ShapesMenuProps = {
     icon: string;
     value: Array<ActiveElement>;
   };
-  activeElement: any;
-  handleActiveElement: any;
-  handleImageUpload: any;
-  imageInputRef: any;
+  activeElement: ActiveElement;
+  handleActiveElement: (element: ActiveElement) => void;
+  handleImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  imageInputRef: React.MutableRefObject<HTMLInputElement | null>;
 };
 
 export type CanvasMouseDown = {
   options: fabric.IEvent;
   canvas: fabric.Canvas;
-  selectedShapeRef: any;
+  selectedShapeRef: React.MutableRefObject<string | null>;
   isDrawing: React.MutableRefObject<boolean>;
   shapeRef: React.MutableRefObject<fabric.Object | null>;
   activeObjectRef: React.MutableRefObject<fabric.Object | null>;
@@ -147,8 +146,6 @@ export type CanvasMouseDown = {
   brushSettings?: {
     width: number;
     color: string;
-    texture: string;
-    roughness: number;
     opacity?: number;
   };
 };
@@ -157,8 +154,8 @@ export type CanvasMouseMove = {
   options: fabric.IEvent;
   canvas: fabric.Canvas;
   isDrawing: React.MutableRefObject<boolean>;
-  selectedShapeRef: any;
-  shapeRef: any;
+  selectedShapeRef: React.MutableRefObject<string | null>;
+  shapeRef: React.MutableRefObject<fabric.Object | null>;
   syncShapeInStorage: (shape: fabric.Object) => void;
   isPanning: React.MutableRefObject<boolean>;
   lastPanPoint: React.MutableRefObject<{ x: number; y: number } | null>;
@@ -166,8 +163,8 @@ export type CanvasMouseMove = {
 
 export type CanvasMouseUp = {
   isDrawing: React.MutableRefObject<boolean>;
-  shapeRef: any;
-  selectedShapeRef: any;
+  shapeRef: React.MutableRefObject<fabric.Object | null>;
+  selectedShapeRef: React.MutableRefObject<string | null>;
   syncShapeInStorage: (shape: fabric.Object) => void;
   isPanning: React.MutableRefObject<boolean>;
   lastPanPoint: React.MutableRefObject<{ x: number; y: number } | null>;
@@ -181,7 +178,7 @@ export type CanvasObjectModified = {
 };
 
 export type CanvasPathCreated = {
-  options: (fabric.IEvent & { path: CustomFabricObject<fabric.Path> }) | any;
+  options: fabric.IEvent & { path: CustomFabricObject };
   syncShapeInStorage: (shape: fabric.Object) => void;
 };
 
@@ -200,8 +197,8 @@ export type CanvasObjectScaling = {
 
 export type RenderCanvas = {
   fabricRef: React.MutableRefObject<fabric.Canvas | null>;
-  canvasObjects: any;
-  activeObjectRef: any;
+  canvasObjects: Array<fabric.Object>;
+  activeObjectRef: React.MutableRefObject<fabric.Object | null>;
 };
 
 export type CursorChatProps = {

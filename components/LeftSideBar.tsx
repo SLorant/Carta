@@ -14,6 +14,7 @@ const LeftSideBar = ({
   handleZoomIn,
   handleZoomOut,
   handleZoomReset,
+  fabricRef,
 }: NavbarProps) => {
   const isActive = (value: string | Array<ActiveElement>) =>
     (activeElement && activeElement.value === value) ||
@@ -51,7 +52,7 @@ const LeftSideBar = ({
             />
           ) : item?.value === "comments" ? (
             // If value is comments, trigger the NewThread component
-            <NewThread>
+            <NewThread fabricRef={fabricRef}>
               <Button className="relative w-6 h-6 object-contain bg-transparent hover:bg-transparent">
                 <Image
                   src={item.icon}

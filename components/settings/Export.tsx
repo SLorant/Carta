@@ -12,7 +12,7 @@ const Export = () => {
   };
 
   return (
-    <div className="flex flex-col gap-3 px-2 py-3 text-secondary">
+    <div className="flex flex-col gap-3 px-2 py-3 text-secondary mb-6">
       <h3 className="text-base font-bold uppercase">Export</h3>
       <Button
         variant="outline"

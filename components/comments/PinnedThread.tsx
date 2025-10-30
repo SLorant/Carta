@@ -5,7 +5,7 @@ import { ThreadData } from "@liveblocks/client";
 import { Thread } from "@liveblocks/react-ui";
 
 import { ThreadMetadata } from "@/liveblocks.config";
-import { useUserProfile } from "@/hooks/useUserProfile";
+import { useUserProfileById } from "@/hooks/useUserProfileById";
 import Avatar from "../users/Avatar";
 
 type Props = {
@@ -21,7 +21,11 @@ export const PinnedThread = ({ thread, onFocus, ...props }: Props) => {
   );
 
   const [minimized, setMinimized] = useState(startMinimized);
-  const { profile } = useUserProfile();
+
+  // Get the thread creator's information from the first comment
+  const creatorUserId = thread.comments[0]?.userId;
+
+  const { profile: creatorProfile } = useUserProfileById(creatorUserId);
 
   /**
    * memoize the result of this function so that it doesn't change on every render but only when the thread changes
@@ -55,10 +59,12 @@ export const PinnedThread = ({ thread, onFocus, ...props }: Props) => {
           data-draggable={true}
         >
           <Avatar
-            name="You"
+            name={
+              creatorProfile?.displayName || creatorProfile?.username || "User"
+            }
             otherStyles="border-[3px] border-white cursor-pointer"
-            profilePictureUrl={profile?.profilePictureUrl}
-            userId={profile?.uid}
+            profilePictureUrl={creatorProfile?.profilePictureUrl}
+            userId={creatorUserId || "unknown"}
           />
         </div>
         {!minimized ? (
@@ -75,7 +81,7 @@ export const PinnedThread = ({ thread, onFocus, ...props }: Props) => {
         ) : null}
       </div>
     ),
-    [thread.comments.length, minimized]
+    [thread, minimized, creatorProfile, creatorUserId, onFocus, props]
   );
 
   return <>{memoizedContent}</>;

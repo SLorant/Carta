@@ -1,9 +1,10 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import type { Metadata } from "next";
 import { Recursive, Jaini } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/components/AuthProvider";
 
-const recursive = Recursive({
+const _recursive = Recursive({
   variable: "--font-recursive",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
@@ -28,6 +29,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body /* className={`${recursive.variable} ${jaini.variable} antialiased`} */
+        suppressHydrationWarning={true}
       >
         <div className="z-0 relative w-screen min-h-screen h-full bg-background">
           <AuthProvider>{children}</AuthProvider>

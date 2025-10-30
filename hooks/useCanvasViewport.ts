@@ -57,8 +57,8 @@ export const useCanvasViewport = (
     if (!vpt) return { x: originalX, y: originalY };
 
     // The stored coordinates are in canvas space, apply current transformations
-    const screenX = originalX * (zoom / 1.6) + vpt[4];
-    const screenY = originalY * (zoom / 1.6) + vpt[5];
+    const screenX = originalX + vpt[4] + zoom / vpt[4] / 10;
+    const screenY = originalY + vpt[5] + zoom / vpt[5] / 10;
 
     return { x: screenX, y: screenY };
   };

@@ -1,7 +1,8 @@
+import { MutableRefObject } from "react";
 import { Label } from "../ui/label";
 
 type Props = {
-  inputRef: any;
+  inputRef: MutableRefObject<HTMLInputElement | null> | undefined;
   attribute: string;
   placeholder: string;
   attributeType: string;
@@ -16,10 +17,26 @@ const Color = ({
   handleInputChange,
 }: Props) => (
   <div className="flex flex-col gap-3 border-b border-primary-grey-200 py-5 px-2 text-secondary">
-    <h3 className="text-base font-bold uppercase">{placeholder}</h3>
+    <div className="flex items-center justify-between">
+      <h3 className="text-base font-bold uppercase">{placeholder}</h3>
+      {attributeType === "stroke" &&
+        attribute &&
+        attribute !== "transparent" && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleInputChange("stroke", "");
+            }}
+            className="text-red-500 hover:text-red-400 text-4xl font-bold cursor-pointer border-none rounded "
+            title="Remove stroke"
+          >
+            ×
+          </button>
+        )}
+    </div>
     <div
       className="flex items-center gap-2 border border-primary-grey-200  cursor-pointer"
-      onClick={() => inputRef.current.click()}
+      onClick={() => inputRef?.current?.click()}
     >
       <input
         className="cursor-pointer"

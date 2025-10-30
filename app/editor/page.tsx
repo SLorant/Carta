@@ -22,7 +22,7 @@ import {
   renderCanvas,
   updateBrushSettings,
 } from "@/lib/canvas";
-import { ActiveElement, Attributes } from "@/types/type";
+import { ActiveElement, Attributes, CustomFabricObject } from "@/types/type";
 import { useStorage } from "@/liveblocks.config";
 import { useMutation, useRedo, useUndo } from "@liveblocks/react";
 import type { LiveMap, Lson } from "@liveblocks/client";
@@ -56,16 +56,14 @@ function EditorContent() {
   const [elementAttributes, setElementAttributes] = useState<Attributes>({
     width: "",
     height: "",
-    fontSize: "",
-    fontFamily: "",
-    fontWeight: "",
+    fontSize: "36",
+    fontFamily: "Helvetica",
+    fontWeight: "400",
     fill: "#aabbcc",
     stroke: "#aabbcc",
     opacity: "1",
     brushWidth: "20",
     brushColor: "#ffffff",
-    brushTexture: "continental",
-    brushRoughness: "75",
   });
 
   const [activeElement, setActiveElement] = useState<ActiveElement>({
@@ -143,7 +141,7 @@ function EditorContent() {
 
     // Set the active element to show premade shapes is active
     setActiveElement({
-      icon: "/assets/shapes.svg",
+      icon: "/castle.svg",
       name: "Premade Shapes",
       value: "premade-shapes",
     });
@@ -226,6 +224,13 @@ function EditorContent() {
     const storageId = (object as fabric.Object & { storageId?: string })
       .storageId;
 
+    console.log(
+      "syncShapeInStorage called for object:",
+      objectId,
+      "storageId:",
+      storageId
+    );
+
     const shapeData = object.toJSON();
     shapeData.objectId = objectId;
 
@@ -255,7 +260,7 @@ function EditorContent() {
 
     // Use storageId as key for color layer objects, objectId for others
     const storageKey = storageId || objectId;
-    canvasObjects?.set(storageKey, shapeData);
+    if (storageKey) canvasObjects?.set(storageKey, shapeData);
   }, []);
 
   const [isCanvasInitialized, setIsCanvasInitialized] = useState(false);
@@ -279,8 +284,6 @@ function EditorContent() {
             brushSettings: {
               width: parseInt(elementAttributes.brushWidth),
               color: elementAttributes.brushColor,
-              texture: elementAttributes.brushTexture,
-              roughness: parseInt(elementAttributes.brushRoughness),
               opacity: parseFloat(elementAttributes.opacity),
             },
           });
@@ -294,6 +297,7 @@ function EditorContent() {
     undo,
     elementAttributes,
   ]);
+  // This useEffect is no longer needed as we handle event listeners in the main initialization useEffect
 
   useEffect(() => {
     // Use setTimeout to wait for the next tick when the DOM is ready
@@ -386,7 +390,9 @@ function EditorContent() {
 
       canvas.on("path:created", (options) => {
         handlePathCreated({
-          options,
+          options: options as unknown as fabric.IEvent & {
+            path: CustomFabricObject;
+          },
           syncShapeInStorage,
           selectedShapeRef,
           elementAttributes,
@@ -421,9 +427,10 @@ function EditorContent() {
       setIsCanvasInitialized(true);
 
       return () => {
+        window.removeEventListener("resize", handleWindowResize);
         canvas.dispose();
       };
-    }, 500); // Run in next tick
+    }, 100); // Reduced timeout to improve responsiveness
 
     // Cleanup function
     return () => {
@@ -438,40 +445,31 @@ function EditorContent() {
     redo,
     syncShapeInStorage,
     undo,
-    /*  elementAttributes, */
-    /* handleActiveElement, */
-    /*     elementAttributes.brushWidth,
-    elementAttributes.brushColor,
-    elementAttributes.brushTexture,
-    elementAttributes.brushRoughness, */
+    handleActiveElement,
   ]);
 
   useEffect(() => {
     if (isCanvasInitialized && fabricRef.current) {
-      renderCanvas({ activeObjectRef, canvasObjects, fabricRef });
+      renderCanvas({
+        activeObjectRef,
+        canvasObjects: canvasObjects as unknown as fabric.Object[],
+        fabricRef,
+      });
     }
   }, [canvasObjects, isCanvasInitialized]);
 
   // Update brush settings when elementAttributes change and user is in drawing mode
   useEffect(() => {
-    if (
-      fabricRef.current &&
-      (selectedShapeRef.current === "freeform" ||
-        selectedShapeRef.current === "color")
-    ) {
+    if (fabricRef.current && selectedShapeRef.current === "color") {
       updateBrushSettings(fabricRef.current, {
         width: parseInt(elementAttributes.brushWidth),
         color: elementAttributes.brushColor,
-        texture: elementAttributes.brushTexture,
-        roughness: parseInt(elementAttributes.brushRoughness),
         opacity: parseFloat(elementAttributes.opacity),
       });
     }
   }, [
     elementAttributes.brushWidth,
     elementAttributes.brushColor,
-    elementAttributes.brushTexture,
-    elementAttributes.brushRoughness,
     elementAttributes.opacity,
   ]);
 
@@ -497,6 +495,7 @@ function EditorContent() {
         handleZoomIn={handleZoomInCanvas}
         handleZoomOut={handleZoomOutCanvas}
         handleZoomReset={handleZoomResetCanvas}
+        fabricRef={fabricRef}
       />
       <Live
         canvasRef={canvasRef}
@@ -511,7 +510,7 @@ function EditorContent() {
         isEditingRef={isEditingRef}
         setElementAttributes={setElementAttributes}
         syncShapeInStorage={syncShapeInStorage}
-        allShapes={Array.from(canvasObjects)}
+        allShapes={Array.from(canvasObjects) as unknown as fabric.Object[]}
         selectedShapeRef={selectedShapeRef}
       />
       <PremadeShapesModal

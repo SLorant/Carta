@@ -6,17 +6,28 @@ import { fabric } from "fabric";
 
 import { getShapeInfo } from "@/lib/utils";
 
+type LayerData = {
+  type?: string;
+  objectId?: string;
+  visible?: boolean;
+  [key: string]: unknown;
+};
+
+export type LayerEntry = [string, LayerData];
+
 interface LayersProps {
-  allShapes: Array<[string, any]>;
+  allShapes: LayerEntry[];
   fabricRef: React.MutableRefObject<fabric.Canvas | null>;
   activeObjectRef: React.MutableRefObject<fabric.Object | null>;
   syncShapeInStorage: (shape: fabric.Object) => void;
 }
 
 // Helper function to safely access objectId property
-const getObjectId = (obj: fabric.Object): string | undefined => {
+const getObjectId = (
+  obj: fabric.Object | null | undefined
+): string | undefined => {
   if (!obj) return undefined;
-  return (obj as any).objectId;
+  return (obj as fabric.Object & { objectId?: string }).objectId;
 };
 
 const Layers = ({
@@ -57,7 +68,7 @@ const Layers = ({
     // If there are color layer paths, add a single "Color" entry
     if (colorLayerPaths.length > 0) {
       // Use the first color path as the representative, but modify its display info
-      const colorLayerEntry: [string, any] = [
+      const colorLayerEntry: [string, LayerData] = [
         "color-layer", // Use a consistent key
         {
           ...colorLayerPaths[0][1], // Copy properties from first path
@@ -390,7 +401,7 @@ const Layers = ({
 
   const memoizedShapes = useMemo(
     () => (
-      <section className="flex flex-col pr-4 text-secondary min-w-[227px] sticky left-0 h-full max-sm:hidden select-none overflow-y-auto pb-20">
+      <section className="flex flex-col pr-4 text-secondary min-w-[227px] sticky left-0 h-full max-sm:hidden select-none overflow-y-auto pb-00">
         <div className="flex flex-col">
           {orderedShapes?.map(
             (
@@ -432,7 +443,7 @@ const Layers = ({
                   onDragLeave={handleDragLeave}
                   onDrop={(e) => handleDrop(e, objectId)}
                   onClick={() => handleLayerClick(objectId)}
-                  className={`group rounded-md my-1 pl-6 flex items-center gap-2 pr-5 py-2.5 hover:cursor-pointer duration-200 ease-in-out relative
+                  className={`group rounded-md my-1 pl-4 flex items-center gap-2 pr-2 py-2.5 hover:cursor-pointer duration-200 ease-in-out relative
                   ${
                     isActive
                       ? "bg-primary text-white"
@@ -463,7 +474,7 @@ const Layers = ({
                   </h3>
 
                   {/* Layer actions */}
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 duration-200">
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 duration-200 justify-end">
                     {objectId !== "color-layer" && (
                       <>
                         {/* Move to front */}
@@ -487,10 +498,10 @@ const Layers = ({
                     )}
                     {objectId === "color-layer" && (
                       <span
-                        className="text-xs opacity-50 px-2"
+                        className="text-xs opacity-50 px-1"
                         title="Color layer is always at the bottom"
                       >
-                        Bottom Layer
+                        Bottom
                       </span>
                     )}
                   </div>
@@ -498,7 +509,7 @@ const Layers = ({
                   {/* Visibility toggle */}
                   <button
                     onClick={(e) => handleLayerVisibilityToggle(objectId, e)}
-                    className="opacity-60 hover:opacity-100 duration-200 p-1"
+                    className="opacity-60 hover:opacity-100 duration-200 p-1 flex-shrink-0"
                     title={isVisible ? "Hide layer" : "Show layer"}
                   >
                     {isVisible ? (

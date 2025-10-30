@@ -19,8 +19,6 @@ export const configureFreeDrawingBrush = (
   settings: {
     width: number;
     color: string;
-    texture: string;
-    roughness: number;
     opacity?: number;
   }
 ) => {
@@ -40,48 +38,6 @@ export const configureFreeDrawingBrush = (
   // Set basic brush properties
   brush.width = settings.width;
   brush.color = brushColor;
-
-  // Configure texture and roughness based on settings
-  switch (settings.texture) {
-    case "smooth":
-      brush.decimate = 0; // Less decimation for smoother lines
-      break;
-    case "rough":
-      brush.decimate = 0; // More decimation for rougher lines
-      break;
-    case "textured":
-      brush.decimate = 0; // Medium decimation
-      break;
-    case "continental":
-      brush.decimate = 0; // Medium decimation
-
-      /*   brush.decimate = Math.floor(20 + (settings.roughness / 100) * 30); // Variable decimation based on roughness
-      // Create a custom pattern brush for continental effect
-      createContinentalBrush(canvas, settings); */
-      break;
-    default:
-      brush.decimate = 0;
-  }
-};
-
-// Create a special continental-style brush that creates organic, coastline-like strokes
-const createContinentalBrush = (
-  canvas: fabric.Canvas,
-  settings: { width: number; color: string; roughness: number }
-) => {
-  // For continental effect, we'll use the pencil brush with organic variations
-  const brush = canvas.freeDrawingBrush;
-
-  // Add some organic variation to the drawing based on roughness
-  const baseDecimate = 15;
-  const roughnessVariation = (settings.roughness / 100) * 20;
-  brush.decimate = Math.floor(baseDecimate + roughnessVariation);
-
-  // Vary the width slightly for more organic feel
-  if (settings.roughness > 50) {
-    brush.width =
-      settings.width + Math.random() * (settings.roughness / 100) * 5;
-  }
 };
 
 // Helper function to reorder all objects on canvas based on their z-index
@@ -144,6 +100,9 @@ export const initializeFabric = ({
   return canvas;
 };
 
+// Global flag to prevent multiple premade shape creations
+let isCreatingPremadeShape = false;
+
 // instantiate creation of custom fabric object/shape and add it to canvas
 export const handleCanvasMouseDown = ({
   options,
@@ -196,11 +155,8 @@ export const handleCanvasMouseDown = ({
   // set canvas drawing mode to false
   canvas.isDrawingMode = false;
 
-  // if selected shape is freeform or color, set drawing mode to true and return
-  if (
-    selectedShapeRef.current === "freeform" ||
-    selectedShapeRef.current === "color"
-  ) {
+  // if selected shape is color, set drawing mode to true and return
+  if (selectedShapeRef.current === "color") {
     isDrawing.current = true;
     canvas.isDrawingMode = true;
 
@@ -239,6 +195,10 @@ export const handleCanvasMouseDown = ({
     // Handle premade shapes - create new instance each time like regular shapes
     isDrawing.current = false;
 
+    // Prevent multiple rapid creations by checking if we're already creating a premade shape
+    if (isCreatingPremadeShape) return;
+    isCreatingPremadeShape = true;
+
     const premadeData = selectedShapeRef.current.replace("premade:", "");
     const [shapeSrc, shapeName] = premadeData.split(":");
 
@@ -246,8 +206,23 @@ export const handleCanvasMouseDown = ({
     const displayName =
       shapeName || shapeSrc.split("/").pop()?.split(".")[0] || "Image";
 
+    // Safety timeout to reset flag in case of errors
+    const resetTimeout = setTimeout(() => {
+      isCreatingPremadeShape = false;
+    }, 5000);
+
     // Create a new image instance for placement
     fabric.Image.fromURL(shapeSrc, (img) => {
+      // Clear the timeout and reset creation state when image is loaded
+      clearTimeout(resetTimeout);
+      isCreatingPremadeShape = false;
+
+      // Check if image loaded successfully
+      if (!img || !img.getElement()) {
+        console.error("Failed to load premade shape image:", shapeSrc);
+        return;
+      }
+
       img.scaleToWidth(50);
       img.scaleToHeight(50);
 
@@ -398,13 +373,9 @@ export const handleCanvaseMouseMove = ({
     return;
   }
 
-  // if selected shape is freeform or color, return
+  // if selected shape is  color, return
   if (!isDrawing.current) return;
-  if (
-    selectedShapeRef.current === "freeform" ||
-    selectedShapeRef.current === "color"
-  )
-    return;
+  if (selectedShapeRef.current === "color") return;
 
   canvas.isDrawingMode = false;
 
@@ -422,9 +393,12 @@ export const handleCanvaseMouseMove = ({
       break;
 
     case "circle":
-      shapeRef.current.set({
-        radius: Math.abs(pointer.x - (shapeRef.current?.left || 0)) / 2,
-      });
+      if (shapeRef.current) {
+        const circle = shapeRef.current as fabric.Circle;
+        circle.set({
+          radius: Math.abs(pointer.x - (circle.left || 0)) / 2,
+        } as Partial<fabric.Circle>);
+      }
       break;
 
     case "triangle":
@@ -435,7 +409,7 @@ export const handleCanvaseMouseMove = ({
       break;
 
     case "line":
-      shapeRef.current?.set({
+      (shapeRef.current as fabric.Line)?.set({
         x2: pointer.x,
         y2: pointer.y,
       });
@@ -456,8 +430,8 @@ export const handleCanvaseMouseMove = ({
   canvas.renderAll();
 
   // sync shape in storage
-  if (shapeRef.current?.objectId) {
-    syncShapeInStorage(shapeRef.current);
+  if ((shapeRef.current as fabric.Object & { objectId?: string })?.objectId) {
+    syncShapeInStorage(shapeRef.current!);
   }
 };
 
@@ -489,14 +463,10 @@ export const handleCanvasMouseUp = ({
   }
 
   isDrawing.current = false;
-  if (
-    selectedShapeRef.current === "freeform" ||
-    selectedShapeRef.current === "color"
-  )
-    return;
+  if (selectedShapeRef.current === "color") return;
 
   // sync shape in storage as drawing is stopped
-  syncShapeInStorage(shapeRef.current);
+  syncShapeInStorage(shapeRef.current!);
 
   // Only clear shapeRef if we were actually drawing a new shape
   if (shapeRef.current) {
@@ -667,8 +637,6 @@ export const handleCanvasSelectionCreated = ({
   options,
   isEditingRef,
   setElementAttributes,
-  setActiveElement,
-  selectedShapeRef,
 }: CanvasSelectionCreated) => {
   // Reset editing state when a new selection is made
   isEditingRef.current = false;
@@ -701,7 +669,7 @@ export const handleCanvasSelectionCreated = ({
 
   // get the selected element
   const selectedElement = options?.selected[0] as fabric.Object & {
-    fontSize: string;
+    fontSize: number;
     fontFamily: string;
     fontWeight: string;
   };
@@ -722,14 +690,12 @@ export const handleCanvasSelectionCreated = ({
       height: scaledHeight?.toFixed(0).toString() || "",
       fill: selectedElement?.fill?.toString() || "",
       stroke: selectedElement?.stroke || "",
-      fontSize: selectedElement?.fontSize || "",
+      fontSize: selectedElement?.fontSize?.toString() || "",
       fontFamily: selectedElement?.fontFamily || "",
       fontWeight: selectedElement?.fontWeight || "",
       opacity: selectedElement?.opacity?.toString() || "1",
       brushWidth: "20",
       brushColor: "#ffffff",
-      brushTexture: "continental",
-      brushRoughness: "75",
     });
   }
 };
@@ -781,6 +747,9 @@ export const handleCanvasObjectScaling = ({
   }));
 };
 
+// Global flag to prevent recursive rendering
+let isRendering = false;
+
 // render canvas objects coming from storage on canvas
 export const renderCanvas = ({
   fabricRef,
@@ -793,12 +762,21 @@ export const renderCanvas = ({
     return;
   }
 
+  // Prevent recursive rendering
+  if (isRendering) {
+    return;
+  }
+
+  isRendering = true;
+
   // Get current objects on canvas
   const currentObjects = fabricRef.current.getObjects();
 
   // Get objects from storage
   const storageObjectIds = new Set(
-    Array.from(canvasObjects as Map<string, unknown>).map(([id]) => id)
+    Array.from(canvasObjects as unknown as Map<string, unknown>).map(
+      ([id]) => id
+    )
   );
 
   // Find objects to remove (exist on canvas but not in storage)
@@ -822,7 +800,7 @@ export const renderCanvas = ({
 
   // Find objects to add/update (exist in storage but not on canvas or need updating)
   const objectEntries = Array.from(
-    canvasObjects as Map<string, fabric.Object & { zIndex?: number }>
+    canvasObjects as unknown as Map<string, fabric.Object & { zIndex?: number }>
   );
 
   const sortedCanvasObjects = objectEntries.sort((a, b) => {
@@ -859,12 +837,61 @@ export const renderCanvas = ({
     });
 
     if (existingObject) {
-      // Object exists, just update its properties if needed
-      // For now, we'll skip updating to avoid flashing - objects are updated via other mechanisms
+      // Object exists, update its properties with the latest data from storage
       const objectId = (existingObject as fabric.Object & { objectId?: string })
         .objectId;
+
+      // Don't update the object if it's currently being modified by the user
+      const isActiveObject =
+        fabricRef.current?.getActiveObject() === existingObject;
+      const isCurrentUserActiveObject =
+        (activeObjectRef.current as fabric.Object & { objectId?: string })
+          ?.objectId === objectId;
+
+      if (!isActiveObject || !isCurrentUserActiveObject) {
+        // Update the object properties from storage
+        const updatedData = { ...objectData } as Record<string, unknown>;
+        delete updatedData.objectId; // Remove objectId to avoid conflicts
+        delete updatedData.storageId; // Remove storageId to avoid conflicts
+        delete updatedData.zIndex; // Handle zIndex separately
+        delete updatedData.premadeName; // Handle premadeName separately
+
+        // Temporarily disable events to avoid triggering storage updates during sync
+        const wasEvented = existingObject.evented;
+        existingObject.evented = false;
+
+        // Apply the updated properties
+        existingObject.set(updatedData);
+
+        // Restore event handling
+        existingObject.evented = wasEvented;
+
+        // Update zIndex if provided
+        const storedZIndex = (objectData as unknown as Record<string, unknown>)
+          .zIndex as number | undefined;
+        if (storedZIndex !== undefined) {
+          (existingObject as fabric.Object & { zIndex: number }).zIndex =
+            storedZIndex;
+        }
+
+        // Update premadeName if provided
+        const storedPremadeName = (
+          objectData as unknown as Record<string, unknown>
+        ).premadeName as string | undefined;
+        if (storedPremadeName !== undefined) {
+          (
+            existingObject as fabric.Object & { premadeName: string }
+          ).premadeName = storedPremadeName;
+        }
+
+        // Update coordinates for proper interaction
+        existingObject.setCoords();
+      }
+
+      // Ensure active object is maintained correctly
       if (
-        activeObjectRef.current?.objectId === objectId &&
+        (activeObjectRef.current as fabric.Object & { objectId?: string })
+          ?.objectId === objectId &&
         fabricRef.current?.getActiveObject() !== existingObject
       ) {
         fabricRef.current?.setActiveObject(existingObject);
@@ -907,7 +934,8 @@ export const renderCanvas = ({
 
           // if element is active, keep it in active state so that it can be edited further
           if (
-            activeObjectRef.current?.objectId === actualObjectId &&
+            (activeObjectRef.current as fabric.Object & { objectId?: string })
+              ?.objectId === actualObjectId &&
             actualObjectId !== "color-layer"
           ) {
             fabricRef.current?.setActiveObject(enlivenedObj);
@@ -964,19 +992,41 @@ export const renderCanvas = ({
   }
 
   fabricRef.current?.renderAll();
+
+  // Reset the rendering flag
+  isRendering = false;
 };
 
 // resize canvas dimensions on window resize
 export const handleResize = ({ canvas }: { canvas: fabric.Canvas | null }) => {
-  const canvasElement = document.getElementById("canvas");
-  if (!canvasElement) return;
-
   if (!canvas) return;
 
+  // Get the actual canvas HTML element from the fabric canvas
+  const canvasHTMLElement = canvas.getElement();
+  if (!canvasHTMLElement) return;
+
+  // Get the parent container that has the ID "canvas" - this is what we want to size to
+  const canvasContainer = document.getElementById("canvas");
+  if (!canvasContainer) return;
+
+  // Find the div that contains the actual canvas (the one with relative positioning)
+  const canvasWrapper = canvasContainer.querySelector(
+    "div.relative"
+  ) as HTMLElement;
+  if (!canvasWrapper) return;
+
+  // Set canvas dimensions to match the wrapper container dimensions
   canvas.setDimensions({
-    width: canvasElement.clientWidth,
-    height: canvasElement.clientHeight,
+    width: canvasWrapper.clientWidth,
+    height: canvasWrapper.clientHeight,
   });
+
+  // Also ensure the HTML canvas element matches these dimensions
+  canvasHTMLElement.style.width = "100%";
+  canvasHTMLElement.style.height = "100%";
+
+  // Re-render the canvas after resize
+  canvas.renderAll();
 };
 
 // zoom canvas on mouse scroll
@@ -1044,8 +1094,6 @@ export const updateBrushSettings = (
   settings: {
     width: number;
     color: string;
-    texture: string;
-    roughness: number;
     opacity?: number;
   }
 ) => {

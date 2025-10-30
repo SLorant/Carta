@@ -91,12 +91,7 @@ export const createSpecificShape = (
   }
 };
 
-export const handleImageUpload = ({
-  file,
-  canvas,
-  shapeRef,
-  syncShapeInStorage,
-}: ImageUpload) => {
+export const handleImageUpload = ({ file, shapeRef }: ImageUpload) => {
   const reader = new FileReader();
 
   reader.onload = () => {
@@ -119,9 +114,7 @@ export const handleImageUpload = ({
 
 export const handlePremadeShapeUpload = ({
   shapeSrc,
-  canvas,
   shapeRef,
-  syncShapeInStorage,
 }: {
   shapeSrc: string;
   canvas: React.MutableRefObject<fabric.Canvas | null>;
@@ -147,7 +140,7 @@ export const createShape = (
   pointer: PointerEvent,
   shapeType: string
 ) => {
-  if (shapeType === "freeform" || shapeType === "color") {
+  if (shapeType === "color") {
     canvas.isDrawingMode = true;
     return null;
   }
@@ -166,13 +159,39 @@ export const modifyShape = ({
 
   if (!selectedElement || selectedElement?.type === "activeSelection") return;
 
-  // if  property is width or height, set the scale of the selected element
+  // Handle width and height changes based on shape type
   if (property === "width") {
-    selectedElement.set("scaleX", 1);
-    selectedElement.set("width", Number(value));
+    if (selectedElement.type === "circle") {
+      // For circles, calculate radius from width
+      const radius = Number(value) / 2;
+      (selectedElement as fabric.Circle).set("radius", radius);
+      selectedElement.set("scaleX", 1);
+      selectedElement.set("scaleY", 1);
+    } else if (selectedElement.type === "image") {
+      // For images (including premade shapes), use scaling
+      const scaleX = Number(value) / selectedElement.width!;
+      selectedElement.set("scaleX", scaleX);
+    } else {
+      // For rectangles and other shapes with native width property
+      selectedElement.set("scaleX", 1);
+      selectedElement.set("width", Number(value));
+    }
   } else if (property === "height") {
-    selectedElement.set("scaleY", 1);
-    selectedElement.set("height", Number(value));
+    if (selectedElement.type === "circle") {
+      // For circles, calculate radius from height
+      const radius = Number(value) / 2;
+      (selectedElement as fabric.Circle).set("radius", radius);
+      selectedElement.set("scaleX", 1);
+      selectedElement.set("scaleY", 1);
+    } else if (selectedElement.type === "image") {
+      // For images (including premade shapes), use scaling
+      const scaleY = Number(value) / selectedElement.height!;
+      selectedElement.set("scaleY", scaleY);
+    } else {
+      // For rectangles and other shapes with native height property
+      selectedElement.set("scaleY", 1);
+      selectedElement.set("height", Number(value));
+    }
   } else if (property === "opacity") {
     // Convert opacity to number for fabric.js
     selectedElement.set("opacity", Number(value));

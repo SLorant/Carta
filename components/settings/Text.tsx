@@ -92,7 +92,7 @@ const RenderSelect = ({
       config.property === "fontFamily"
         ? fontFamily
         : config.property === "fontSize"
-        ? fontSize
+        ? fontSize || "36"
         : fontWeight
     }
   >

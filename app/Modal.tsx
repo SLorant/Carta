@@ -7,9 +7,17 @@ import {
 import { TextInput } from "@/components/inputs/TextInput";
 import { PrimaryButton } from "@/components/general/Button";
 import { createUserProfileOnRegistration } from "@/lib/profileService";
+import { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
+
+type ModalProps = {
+  type: string;
+  onClose: () => void;
+  setModal: React.Dispatch<React.SetStateAction<string | null>>;
+  router: AppRouterInstance;
+};
 
 // TODO: types
-const Modal = ({ type, onClose, setModal, router }) => {
+const Modal = ({ type, onClose, setModal, router }: ModalProps) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");

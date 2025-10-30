@@ -76,11 +76,11 @@ export async function getUserProfileByEmail(
         updatedAt: data.updatedAt?.toDate() || new Date(),
       };
     } else {
-      console.error("No user profile found for email:", email);
+      console.info("No user profile found for email:", email);
       return null;
     }
   } catch (error) {
-    console.error("Error getting user profile by email:", error);
+    console.info("Error getting user profile by email:", error);
     throw error;
   }
 }

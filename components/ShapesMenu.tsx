@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 
-import { ShapesMenuProps } from "@/types/type";
+import { ActiveElement, ShapesMenuProps } from "@/types/type";
 
 import {
   DropdownMenu,
@@ -19,7 +19,7 @@ const ShapesMenu = ({
   imageInputRef,
 }: ShapesMenuProps) => {
   const isDropdownElem = item.value.some(
-    (elem) => elem?.value === activeElement.value
+    (elem) => elem?.value === activeElement?.value
   );
 
   return (
@@ -28,12 +28,14 @@ const ShapesMenu = ({
         <DropdownMenuTrigger asChild className="no-ring">
           <Button
             className="relative h-full w-full bg-transparent hover:bg-transparent"
-            onClick={() => handleActiveElement(item)}
+            onClick={() =>
+              handleActiveElement(item as unknown as ActiveElement)
+            }
           >
             <div className="relative h-6 w-6 object-contain bg-transparent hover:bg-transparent">
               <Image
-                src={isDropdownElem ? activeElement.icon : item.icon}
-                alt={item.name}
+                src={isDropdownElem ? activeElement!.icon : item.icon}
+                alt={isDropdownElem ? activeElement!.name : item.name}
                 fill
                 className={isDropdownElem ? "invert" : ""}
               />
@@ -49,7 +51,7 @@ const ShapesMenu = ({
                 handleActiveElement(elem);
               }}
               className={`group flex h-fit justify-between gap-10 rounded-md w-40 px-5 py-3 focus:border-none ${
-                activeElement.value === elem?.value
+                activeElement?.value === elem?.value
                   ? "bg-secondary hover:bg-secondary"
                   : "hover:bg-secondary duration-200 ease-in-out"
               }`}
@@ -61,14 +63,14 @@ const ShapesMenu = ({
                   width={20}
                   height={20}
                   className={
-                    activeElement.value === elem?.value
+                    activeElement?.value === elem?.value
                       ? "invert"
                       : "group-hover:invert duration-200 ease-in-out"
                   }
                 />
                 <p
                   className={`text-sm  ${
-                    activeElement.value === elem?.value
+                    activeElement?.value === elem?.value
                       ? "text-primary-black"
                       : "text-white group-hover:invert duration-200 ease-in-out"
                   }`}

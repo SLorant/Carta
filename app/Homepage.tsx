@@ -6,7 +6,15 @@ import { auth } from "@/firebase.config";
 import BackgroundBlur from "@/components/BackgroundBlur";
 import { useUserProfile } from "@/hooks/useUserProfile";
 
-export const Card = ({ image, title, description }) => {
+export const Card = ({
+  image,
+  title,
+  description,
+}: {
+  image: string;
+  title: string;
+  description: string;
+}) => {
   return (
     <div className="relative w-[300px] h-[300px] md:w-[400px] md:h-[400px] rounded-[20px] bg-background shadow-md">
       <img
@@ -29,7 +37,7 @@ export const Card = ({ image, title, description }) => {
 
 const Homepage = () => {
   const [userName, setUserName] = useState("");
-  const [modalType, setModalType] = useState<"login" | "register" | null>(null);
+  const [modalType, setModalType] = useState<string | null>(null);
   const router = useRouter();
   const { profile } = useUserProfile();
 

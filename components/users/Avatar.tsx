@@ -15,12 +15,22 @@ type Props = {
 };
 
 const Avatar = ({ name, otherStyles, profilePictureUrl, userId }: Props) => {
-  // Use Firebase profile picture if available, otherwise fallback to Liveblocks avatar
+  // Generate a consistent avatar number based on the user identifier
+  const getConsistentAvatarNumber = (identifier: string) => {
+    if (!identifier) return 0;
+    // Simple hash function to convert string to number
+    let hash = 0;
+    for (let i = 0; i < identifier.length; i++) {
+      hash = ((hash << 5) - hash) + identifier.charCodeAt(i);
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    return Math.abs(hash) % 30;
+  };
+
+  // Use Firebase profile picture if available, otherwise fallback to consistent Liveblocks avatar
   const avatarSrc =
     profilePictureUrl ||
-    `https://liveblocks.io/avatars/avatar-${Math.floor(
-      Math.random() * 30
-    )}.png`;
+    `https://liveblocks.io/avatars/avatar-${getConsistentAvatarNumber(userId || name)}.png`;
 
   return (
     <>

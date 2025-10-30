@@ -2,11 +2,6 @@ export const COLORS = ["#DC2626", "#D97706", "#059669", "#7C3AED", "#DB2777"];
 
 export const shapeElements = [
   {
-    icon: "/assets/freeform.svg",
-    name: "Brush",
-    value: "freeform",
-  },
-  {
     icon: "/assets/circle.svg",
     name: "Color",
     value: "color",
@@ -46,7 +41,7 @@ export const navElements = [
   },
   {
     icon: "/castle.svg",
-    name: "Rectangle",
+    name: "Shapes",
     value: shapeElements,
   },
   {

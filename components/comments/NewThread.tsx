@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import {
@@ -14,6 +15,8 @@ import { ComposerSubmitComment } from "@liveblocks/react-ui/primitives";
 
 import { useCreateThread } from "@/liveblocks.config";
 import { useMaxZIndex } from "@/lib/useMaxZIndex";
+import { createThreadAnchor } from "@/lib/threadAnchors";
+import { fabric } from "fabric";
 
 import PinnedComposer from "./PinnedComposer";
 import NewThreadCursor from "./NewThreadCursor";
@@ -22,9 +25,10 @@ type ComposerCoords = null | { x: number; y: number };
 
 type Props = {
   children: ReactNode;
+  fabricRef: React.MutableRefObject<fabric.Canvas | null>;
 };
 
-export const NewThread = ({ children }: Props) => {
+export const NewThread = ({ children, fabricRef }: Props) => {
   // set state to track if we're placing a new comment or not
   const [creatingCommentState, setCreatingCommentState] = useState<
     "placing" | "placed" | "complete"
@@ -171,47 +175,46 @@ export const NewThread = ({ children }: Props) => {
         !composerCoords ||
         !lastPointerEvent.current ||
         !overlayPanel ||
-        !canvasElement
+        !canvasElement ||
+        !fabricRef.current
       ) {
         return;
       }
 
-      // Set coords relative to the top left of your canvas
-      const { top, left } = overlayPanel.getBoundingClientRect();
-      let x = composerCoords.x - left;
-      let y = composerCoords.y - top;
+      // Use Fabric.js's getPointer to get proper canvas coordinates
+      const fakeEvent = {
+        clientX: composerCoords.x,
+        clientY: composerCoords.y,
+      } as MouseEvent;
 
-      // Try to get the fabric canvas instance and convert coordinates to canvas space
-      // This accounts for zoom and pan transformations
-      const fabricCanvas = (canvasElement as any).__fabric__;
-      if (fabricCanvas) {
-        const zoom = fabricCanvas.getZoom();
-        const vpt = fabricCanvas.viewportTransform;
+      const canvasCoords = fabricRef.current.getPointer(fakeEvent);
 
-        if (zoom) {
-          // Convert screen coordinates (relative to canvas element) to canvas coordinates
-          /*  x = (x - vpt[4]) / zoom / 10;
-          y = (y - vpt[5]) / zoom / 10; */
-          x += zoom / 10;
-          y += zoom / 10;
-        }
-      }
       // create a new thread with the composer coords and cursor selectors
-      createThread({
+      const thread = createThread({
         body,
         metadata: {
-          x,
-          y,
+          x: canvasCoords.x,
+          y: canvasCoords.y,
           resolved: false,
           zIndex: maxZIndex + 1,
         },
       });
 
+      // Create an invisible Fabric object to track this thread's position
+      if (thread && fabricRef.current) {
+        createThreadAnchor(
+          fabricRef.current,
+          thread.id,
+          canvasCoords.x,
+          canvasCoords.y
+        );
+      }
+
       setComposerCoords(null);
       setCreatingCommentState("complete");
       setAllowUseComposer(false);
     },
-    [createThread, composerCoords, maxZIndex]
+    [createThread, composerCoords, maxZIndex, fabricRef]
   );
 
   return (

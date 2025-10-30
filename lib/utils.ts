@@ -95,12 +95,6 @@ export const getShapeInfo = (
         name: "Image",
       };
 
-    case "freeform":
-      return {
-        icon: "/assets/freeform.svg",
-        name: "Free Drawing",
-      };
-
     case "color":
       return {
         icon: "/assets/circle.svg",
