@@ -401,13 +401,6 @@ export const handleCanvaseMouseMove = ({
       }
       break;
 
-    case "triangle":
-      shapeRef.current?.set({
-        width: pointer.x - (shapeRef.current?.left || 0),
-        height: pointer.y - (shapeRef.current?.top || 0),
-      });
-      break;
-
     case "line":
       (shapeRef.current as fabric.Line)?.set({
         x2: pointer.x,
@@ -758,7 +751,6 @@ export const renderCanvas = ({
 }: RenderCanvas) => {
   // Safety check: ensure canvas is initialized
   if (!fabricRef.current) {
-    console.log("Canvas not initialized yet, skipping render");
     return;
   }
 

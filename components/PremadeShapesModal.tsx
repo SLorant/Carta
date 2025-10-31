@@ -28,7 +28,7 @@ const PREMADE_SHAPES: PremadeShape[] = [
   },
   {
     name: "Eastern Castle",
-    src: "/assets/castle2.png",
+    src: "/assets/castle.png",
     category: "Buildings",
   },
   {

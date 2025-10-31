@@ -1,17 +1,5 @@
 import { Liveblocks } from "@liveblocks/node";
-import { getAuth } from "firebase-admin/auth";
-import { initializeApp, getApps, cert } from "firebase-admin/app";
-
-// Initialize Firebase Admin if not already initialized
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
-    }),
-  });
-}
+import { getFirebaseAuth } from "@/lib/firebase-admin";
 
 const liveblocks = new Liveblocks({
   secret: process.env.LIVEBLOCKS_SECRET_KEY!,
@@ -26,13 +14,14 @@ export async function POST(request: Request) {
     }
 
     // Verify the Firebase ID token
-    const decodedToken = await getAuth().verifyIdToken(idToken);
+    const auth = getFirebaseAuth();
+    const decodedToken = await auth.verifyIdToken(idToken);
     const { uid, email } = decodedToken;
     const userId = email || uid;
 
     // Get the room to verify ownership
     const room = await liveblocks.getRoom(roomId);
-    
+
     if (!room) {
       return new Response("Room not found", { status: 404 });
     }
@@ -40,7 +29,9 @@ export async function POST(request: Request) {
     // Check if the user is the owner
     const createdBy = room.metadata?.createdBy;
     if (createdBy !== userId) {
-      return new Response("Only the room owner can delete the room", { status: 403 });
+      return new Response("Only the room owner can delete the room", {
+        status: 403,
+      });
     }
 
     // Delete the room from Liveblocks

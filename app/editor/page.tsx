@@ -224,13 +224,6 @@ function EditorContent() {
     const storageId = (object as fabric.Object & { storageId?: string })
       .storageId;
 
-    console.log(
-      "syncShapeInStorage called for object:",
-      objectId,
-      "storageId:",
-      storageId
-    );
-
     const shapeData = object.toJSON();
     shapeData.objectId = objectId;
 
@@ -303,11 +296,9 @@ function EditorContent() {
     // Use setTimeout to wait for the next tick when the DOM is ready
     const timeoutId = setTimeout(() => {
       if (!canvasRef.current) {
-        console.log("Canvas ref is still null after timeout");
         return;
       }
 
-      console.log("Canvas ref is available, initializing fabric...");
       const canvas = initializeFabric({ canvasRef, fabricRef });
 
       canvas.on("mouse:down", (options) => {

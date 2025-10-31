@@ -21,17 +21,6 @@ export const createRectangle = (pointer: PointerEvent) => {
   return rect;
 };
 
-export const createTriangle = (pointer: PointerEvent) => {
-  return new fabric.Triangle({
-    left: pointer.x,
-    top: pointer.y,
-    width: 100,
-    height: 100,
-    fill: "#fff",
-    objectId: uuidv4(),
-  } as CustomFabricObject);
-};
-
 export const createCircle = (pointer: PointerEvent) => {
   const circle = new fabric.Circle({
     left: pointer.x,
@@ -73,9 +62,6 @@ export const createSpecificShape = (
   switch (shapeType) {
     case "rectangle":
       return createRectangle(pointer);
-
-    case "triangle":
-      return createTriangle(pointer);
 
     case "circle":
       return createCircle(pointer);

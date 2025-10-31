@@ -105,7 +105,11 @@ const Modal = ({ type, onClose, setModal, router }: ModalProps) => {
               type="password"
             />
           )}
-          <div className="flex flex-col items-center justify-center">
+          <div
+            className={`${
+              type === "register" ? "mb-8" : ""
+            } flex flex-col items-center justify-center`}
+          >
             <PrimaryButton
               type="submit"
               className="w-24 !text-2xl"
@@ -115,30 +119,32 @@ const Modal = ({ type, onClose, setModal, router }: ModalProps) => {
             </PrimaryButton>
           </div>
         </form>
-        <div className="border border-gray-500 w-full my-8"></div>
-        <div className="flex flex-col items-center justify-center w-full mb-8">
-          <button
+        {type === "login" ? (
+          <>
+            <div className="border border-gray-500 w-full my-8"></div>
+            <div className="flex flex-col items-center justify-center w-full mb-8">
+              {/*           <button
             className=" bg-secondary text-background p-2 rounded-lg h-10 flex justify-center items-center px-4"
             disabled
           >
             <p className="text-lg">
               {type === "login" ? "Sign in with Google" : "Sign up with Google"}
             </p>
-          </button>
-          {type === "login" ? (
-            <p className="mt-6 text-primary text-base">
-              Not registered yet? Register
-              <a
-                className="text-secondary underline cursor-pointer ml-1"
-                onClick={() => {
-                  setModal("register");
-                }}
-              >
-                here
-              </a>
-            </p>
-          ) : null}
-        </div>
+          </button> */}
+              <p className="mt-0 text-primary text-base">
+                Not registered yet? Register
+                <a
+                  className="text-secondary underline cursor-pointer ml-1"
+                  onClick={() => {
+                    setModal("register");
+                  }}
+                >
+                  here
+                </a>
+              </p>
+            </div>
+          </>
+        ) : null}
 
         <button
           className="absolute top-2 right-4 text-secondary text-3xl cursor-pointer"

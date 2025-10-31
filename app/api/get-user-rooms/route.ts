@@ -1,17 +1,5 @@
 import { Liveblocks } from "@liveblocks/node";
-import { getAuth } from "firebase-admin/auth";
-import { initializeApp, getApps, cert } from "firebase-admin/app";
-
-// Initialize Firebase Admin if not already initialized
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
-    }),
-  });
-}
+import { getFirebaseAuth } from "@/lib/firebase-admin";
 
 const liveblocks = new Liveblocks({
   secret: process.env.LIVEBLOCKS_SECRET_KEY!,
@@ -26,7 +14,8 @@ export async function POST(request: Request) {
     }
 
     // Verify the Firebase ID token
-    const decodedToken = await getAuth().verifyIdToken(idToken);
+    const auth = getFirebaseAuth();
+    const decodedToken = await auth.verifyIdToken(idToken);
     const { uid, email } = decodedToken;
     const userId = email || uid;
 

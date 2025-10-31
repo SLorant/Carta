@@ -71,12 +71,6 @@ export const getShapeInfo = (
         name: "Circle",
       };
 
-    case "triangle":
-      return {
-        icon: "/assets/triangle.svg",
-        name: "Triangle",
-      };
-
     case "line":
       return {
         icon: "/assets/line.svg",

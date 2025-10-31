@@ -84,7 +84,7 @@ const LeftSideBar = ({
           title="Zoom In"
         >
           <Image
-            src="/ZoomIn.svg"
+            src="/zoomin.svg"
             alt="Zoom In"
             width={28}
             height={28}
@@ -99,7 +99,7 @@ const LeftSideBar = ({
           title="Zoom Out"
         >
           <Image
-            src="/ZoomOut.svg"
+            src="/zoomout.svg"
             alt="Zoom Out"
             width={28}
             height={28}

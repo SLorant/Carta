@@ -205,7 +205,7 @@ const Maps = () => {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8 lg:gap-10 xl:gap-12 w-full h-full mt-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8 lg:gap-10 xl:gap-12 w-full h-full my-8">
             {userRooms.map((room) => (
               <div
                 key={room.id}
@@ -213,26 +213,28 @@ const Maps = () => {
               >
                 <Image
                   src={room.imageUrl}
-                  className="absolute w-full h-full top-0 left-0 opacity-70 rounded-[20px] cursor-pointer brightness-75"
+                  className="absolute w-full h-full top-0 left-0 opacity-70 rounded-[20px] md:cursor-pointer brightness-75"
                   alt={room.name}
                   fill
                   style={{ objectFit: "cover" }}
-                  onClick={() => handleRoomClick(room.id)}
+                  onClick={() =>
+                    window.innerWidth >= 768 && handleRoomClick(room.id)
+                  }
                 />
 
                 {/* Invite button - only show for room owners */}
                 {user && roomPermissions[room.id] === "owner" && (
-                  <div className="absolute right-2 top-2 gap-1 grid place-items-center grid-cols-2 py-1 md:py-2 mt-2 rounded-xl px-1 md:px-2 duration-300 bg-black/50 group-hover:opacity-100 opacity-0">
+                  <div className="absolute right-2 top-2 gap-1 md:gap-1 grid place-items-center grid-cols-2 py-2 md:py-2 mt-2 rounded-xl px-2 md:px-2 duration-300 bg-black/50 opacity-100 md:group-hover:opacity-100 md:opacity-0">
                     <button
                       onClick={(e) => handleInviteClick(e, room)}
-                      className="cursor-pointer bg-primary text-background px-2 md:px-3 py-1 rounded-md text-xs md:text-sm transition-opacity hover:bg-secondary"
+                      className="cursor-pointer bg-primary text-background px-3 md:px-3 py-2 md:py-1 rounded-md text-sm md:text-sm transition-opacity hover:bg-secondary"
                       title="Invite collaborators"
                     >
                       Invite
                     </button>
                     <button
                       onClick={(e) => handleEditClick(e, room)}
-                      className="cursor-pointer bg-primary text-background px-2 md:px-3 py-1 rounded-md text-xs md:text-sm transition-opacity hover:bg-secondary"
+                      className="cursor-pointer bg-primary text-background px-3 md:px-3 py-2 md:py-1 rounded-md text-sm md:text-sm transition-opacity hover:bg-secondary"
                     >
                       Edit
                     </button>
@@ -245,8 +247,10 @@ const Maps = () => {
                 >
                   <div className="flex items-center gap-2 md:gap-3 mb-1 md:mb-2">
                     <h2
-                      className="text-2xl md:text-3xl lg:text-4xl underline cursor-pointer truncate"
-                      onClick={() => handleRoomClick(room.id)}
+                      className="text-2xl md:text-3xl lg:text-4xl underline md:cursor-pointer truncate"
+                      onClick={() =>
+                        window.innerWidth >= 768 && handleRoomClick(room.id)
+                      }
                     >
                       {room.name}
                     </h2>
