@@ -13,6 +13,7 @@ import BackgroundBlur from "@/components/BackgroundBlur";
 import Header from "@/components/Header";
 import RoomUsers from "@/components/users/RoomUsers";
 import LoadingScreen from "@/components/LoadingScreen";
+import MapsLoader from "./MapsLoader";
 
 const Maps = () => {
   const router = useRouter();
@@ -60,51 +61,8 @@ const Maps = () => {
         setRoomPermissions(permissions);
       } catch (error) {
         console.error("Error loading user rooms:", error);
-
-        // Fallback to local methods (though these now also use Liveblocks)
-        try {
-          const roomsByUid = await RoomService.getUserRooms(user.uid);
-          const roomsByEmail = user.email
-            ? await RoomService.getUserRoomsByEmail(user.email)
-            : [];
-
-          // Combine and deduplicate rooms
-          const allUserRooms = [...roomsByUid, ...roomsByEmail];
-          const uniqueRooms = allUserRooms.filter(
-            (room, index, self) =>
-              index === self.findIndex((r) => r.id === room.id)
-          );
-
-          setUserRooms(uniqueRooms);
-
-          // Load permissions for fallback rooms as well
-          const permissions: Record<
-            string,
-            "owner" | "editor" | "viewer" | null
-          > = {};
-          const userId = user.email || user.uid;
-
-          for (const room of uniqueRooms) {
-            try {
-              permissions[room.id] = await RoomService.getUserPermission(
-                room.id,
-                userId
-              );
-            } catch (error) {
-              console.error(
-                `Error loading permission for room ${room.id}:`,
-                error
-              );
-              permissions[room.id] = null;
-            }
-          }
-
-          setRoomPermissions(permissions);
-        } catch (fallbackError) {
-          console.error("Fallback error:", fallbackError);
-          setUserRooms([]);
-          setRoomPermissions({});
-        }
+        setUserRooms([]);
+        setRoomPermissions({});
       } finally {
         setMapsLoading(false);
       }
@@ -183,27 +141,7 @@ const Maps = () => {
 
         {/* Loading state for maps */}
         {mapsLoading ? (
-          <div className="flex flex-col items-center justify-center w-full h-96 mt-8">
-            <div className="relative w-16 h-16 mb-6">
-              {/* Outer ring */}
-              <div className="absolute inset-0 w-16 h-16 border-4 border-primary/20 rounded-full"></div>
-              {/* Spinning primary ring */}
-              <div className="absolute inset-0 w-16 h-16 border-4 border-transparent border-t-primary border-r-primary rounded-full animate-spin"></div>
-              {/* Counter-spinning secondary ring */}
-              <div
-                className="absolute inset-2 w-12 h-12 border-4 border-transparent border-t-secondary border-l-secondary rounded-full animate-spin"
-                style={{
-                  animationDirection: "reverse",
-                  animationDuration: "2s",
-                }}
-              ></div>
-              {/* Inner pulsing dot */}
-              <div className="absolute inset-6 w-4 h-4 bg-primary rounded-full animate-pulse"></div>
-            </div>
-            <p className="text-xl md:text-2xl text-secondary animate-pulse">
-              Loading your maps...
-            </p>
-          </div>
+          <MapsLoader />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8 lg:gap-10 xl:gap-12 w-full h-full my-8">
             {userRooms.map((room) => (

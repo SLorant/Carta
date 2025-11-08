@@ -25,7 +25,7 @@ export const createCircle = (pointer: PointerEvent) => {
   const circle = new fabric.Circle({
     left: pointer.x,
     top: pointer.y,
-    radius: 100,
+    radius: 10,
     fill: "#fff",
   });
   (circle as fabric.Circle & { objectId?: string }).objectId = uuidv4();

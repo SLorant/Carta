@@ -154,9 +154,6 @@ const Profile = () => {
             <p className="mt-2 text-sm md:text-base lg:text-lg">
               {profile?.email || "Loading..."}
             </p>
-            {/*  <p className="mt-2 text-lg">
-                {profile?.bio || "User bio and other info"}
-              </p> */}
           </div>
           <CancelButton
             className="absolute bottom-8 right-8  text-4xl "

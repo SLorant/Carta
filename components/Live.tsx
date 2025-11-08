@@ -107,6 +107,12 @@ const Live = ({ canvasRef, fabricRef, undo, redo }: Props) => {
 
       updateMyPresence({ cursor: { x, y } });
 
+      // Ensure the canvas area has focus for keyboard events
+      const canvasElement = document.getElementById("canvas");
+      if (canvasElement) {
+        canvasElement.focus();
+      }
+
       setCursorState((state: CursorState) =>
         state.mode === CursorMode.Reaction
           ? { ...state, isPressed: true }
@@ -198,8 +204,10 @@ const Live = ({ canvasRef, fabricRef, undo, redo }: Props) => {
           onPointerDown={handlePointerDown}
           onPointerUp={handlePointerUp}
           id="canvas"
+          tabIndex={0}
           style={{
             cursor: cursorState.mode === CursorMode.Chat ? "none" : "auto",
+            outline: "none", // Remove focus outline since this is a canvas area
           }}
         >
           <div className="relative w-full h-full">
