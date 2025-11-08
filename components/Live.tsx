@@ -130,8 +130,9 @@ const Live = ({ canvasRef, fabricRef, undo, redo }: Props) => {
     );
   }, [cursorState.mode, setCursorState]);
 
-  useEffect(() => {
-    const onKeyUp = (event: KeyboardEvent) => {
+  const handleKeyUp = useCallback(
+    (event: KeyboardEvent) => {
+      // Only handle specific keys for Live component functionality
       if (event.key === "/") {
         setCursorState({
           mode: CursorMode.Chat,
@@ -148,21 +149,27 @@ const Live = ({ canvasRef, fabricRef, undo, redo }: Props) => {
           mode: CursorMode.ReactionSelector,
         });
       }
-    };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "/") {
-        event.preventDefault();
-      }
-    };
+    },
+    [updateMyPresence]
+  );
 
-    window.addEventListener("keyup", onKeyUp);
-    window.addEventListener("keydown", onKeyDown);
+  const handleKeyDown = useCallback((event: KeyboardEvent) => {
+    // Only prevent default for specific keys that this component handles
+    if (event.key === "/") {
+      event.preventDefault();
+    }
+    // Don't interfere with other keyboard shortcuts like Ctrl+C, Ctrl+V, Ctrl+Z, etc.
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener("keyup", handleKeyUp);
+    window.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      window.removeEventListener("keyup", onKeyUp);
-      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+      window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [updateMyPresence]);
+  }, [handleKeyUp, handleKeyDown]);
 
   const setReactions = useCallback((reaction: string) => {
     setCursorState({ mode: CursorMode.Reaction, reaction, isPressed: false });

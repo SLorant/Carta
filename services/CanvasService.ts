@@ -30,6 +30,7 @@ export class CanvasService {
     state: EditorState,
     operations: {
       syncShapeInStorage: (object: fabric.Object) => void;
+      syncMultipleShapesInStorage: (objects: fabric.Object[]) => void;
       handleActiveElement: (elem: ActiveElement) => void;
       undo: () => void;
       redo: () => void;
@@ -56,8 +57,15 @@ export class CanvasService {
     // Attach event listeners
     CanvasService.attachEventListeners(canvas, eventHandlers);
 
-    // Attach window event listeners
-    CanvasService.attachWindowEventListeners(canvas, operations);
+    // Attach window event listeners and store cleanup function
+    const windowListeners = CanvasService.attachWindowEventListeners(
+      canvas,
+      operations
+    );
+
+    // Store cleanup function on canvas for later use
+    (canvas as fabric.Canvas & { _windowCleanup?: () => void })._windowCleanup =
+      windowListeners.cleanup;
 
     return canvas;
   }
@@ -70,6 +78,7 @@ export class CanvasService {
     state: EditorState,
     operations: {
       syncShapeInStorage: (object: fabric.Object) => void;
+      syncMultipleShapesInStorage: (objects: fabric.Object[]) => void;
       handleActiveElement: (elem: ActiveElement) => void;
       undo: () => void;
       redo: () => void;
@@ -118,7 +127,6 @@ export class CanvasService {
           isDrawing: refs.isDrawing,
           shapeRef: refs.shapeRef,
           selectedShapeRef: refs.selectedShapeRef,
-          syncShapeInStorage: operations.syncShapeInStorage,
           isPanning: refs.isPanning,
           lastPanPoint: refs.lastPanPoint,
         });
@@ -127,7 +135,6 @@ export class CanvasService {
       onObjectModified: (options) => {
         handleCanvasObjectModified({
           options,
-          syncShapeInStorage: operations.syncShapeInStorage,
         });
       },
 
@@ -154,7 +161,7 @@ export class CanvasService {
       onSelectionCleared: () => {
         CanvasEventHandler.handleCanvasSelectionCleared({
           canvas,
-          syncShapeInStorage: operations.syncShapeInStorage,
+          syncMultipleShapesInStorage: operations.syncMultipleShapesInStorage,
         });
       },
 
@@ -214,8 +221,9 @@ export class CanvasService {
       redo: () => void;
       deleteShapeFromStorage: (objectId: string) => void;
       syncShapeInStorage: (object: fabric.Object) => void;
+      syncMultipleShapesInStorage: (objects: fabric.Object[]) => void;
     }
-  ): void {
+  ): { cleanup: () => void } {
     const handleWindowResize = () => {
       handleResize({ canvas });
     };
@@ -233,6 +241,14 @@ export class CanvasService {
 
     window.addEventListener("resize", handleWindowResize);
     window.addEventListener("keydown", handleWindowKeyDown);
+
+    // Return cleanup function
+    return {
+      cleanup: () => {
+        window.removeEventListener("resize", handleWindowResize);
+        window.removeEventListener("keydown", handleWindowKeyDown);
+      },
+    };
   }
 
   /**
@@ -240,6 +256,13 @@ export class CanvasService {
    */
   static cleanup(canvas: fabric.Canvas | null): void {
     if (canvas) {
+      // Clean up window event listeners if they exist
+      const canvasWithCleanup = canvas as fabric.Canvas & {
+        _windowCleanup?: () => void;
+      };
+      if (canvasWithCleanup._windowCleanup) {
+        canvasWithCleanup._windowCleanup();
+      }
       canvas.dispose();
     }
   }

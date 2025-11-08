@@ -93,7 +93,6 @@ export class MouseEventHandler {
     isDrawing,
     selectedShapeRef,
     shapeRef,
-    syncShapeInStorage,
     isPanning,
     lastPanPoint,
   }: CanvasMouseMove): void {
@@ -119,9 +118,7 @@ export class MouseEventHandler {
     );
     canvas.renderAll();
 
-    if ((shapeRef.current as FabricObjectWithId)?.objectId) {
-      syncShapeInStorage(shapeRef.current!);
-    }
+    // Don't sync during drawing - only sync when shape creation is complete (mouse up)
   }
 
   /**

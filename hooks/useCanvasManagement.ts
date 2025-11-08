@@ -7,7 +7,7 @@ import { CanvasService } from "@/services/CanvasService";
 import { renderCanvas, updateBrushSettings } from "@/lib/canvas";
 import { handleDelete } from "@/lib/key-events";
 import { defaultNavElement } from "@/constants";
-import { ActiveElement } from "@/types/type";
+import { ActiveElement, CustomFabricObject } from "@/types/type";
 import { PremadeShape } from "@/types/editor.types";
 
 export const useCanvasManagement = (
@@ -69,6 +69,54 @@ export const useCanvasManagement = (
     if (storageKey) canvasObjects?.set(storageKey, shapeData);
   }, []);
 
+  // Batch mutation for updating multiple objects at once (for undo/redo support)
+  const syncMultipleShapesInStorage = useMutation(
+    ({ storage }, objects: fabric.Object[]) => {
+      const canvasObjects = storage.get("canvasObjects") as LiveMap<
+        string,
+        Lson
+      >;
+
+      objects.forEach((object) => {
+        if (!object) return;
+        const objectId = (object as CustomFabricObject).objectId;
+        const storageId = (
+          object as CustomFabricObject & { storageId?: string }
+        ).storageId;
+
+        const shapeData = object.toJSON();
+        (shapeData as Record<string, unknown>).objectId = objectId;
+
+        // Include custom properties in storage
+        if (storageId) {
+          (shapeData as Record<string, unknown>).storageId = storageId;
+        }
+
+        if (
+          (object as fabric.Object & { zIndex?: number }).zIndex !== undefined
+        ) {
+          (shapeData as Record<string, unknown>).zIndex = (
+            object as fabric.Object & { zIndex: number }
+          ).zIndex;
+        }
+
+        if (
+          (object as fabric.Object & { premadeName?: string }).premadeName !==
+          undefined
+        ) {
+          (shapeData as Record<string, unknown>).premadeName = (
+            object as fabric.Object & { premadeName: string }
+          ).premadeName;
+        }
+
+        const storageKey = storageId || objectId;
+        if (storageKey)
+          canvasObjects?.set(storageKey, shapeData as unknown as Lson);
+      });
+    },
+    []
+  );
+
   // Active element handling
   const handleActiveElement = useCallback(
     (elem: ActiveElement) => {
@@ -91,7 +139,7 @@ export const useCanvasManagement = (
       if (refs.fabricRef.current) {
         refs.fabricRef.current.discardActiveObject();
         refs.fabricRef.current.renderAll();
-        
+
         // Disable drawing mode when switching away from color tool
         if (elem?.value !== "color") {
           refs.fabricRef.current.isDrawingMode = false;
@@ -186,6 +234,7 @@ export const useCanvasManagement = (
 
       const canvas = CanvasService.initializeCanvas(refs, state, {
         syncShapeInStorage,
+        syncMultipleShapesInStorage,
         handleActiveElement,
         undo: operations.undo,
         redo: operations.redo,
@@ -244,13 +293,12 @@ export const useCanvasManagement = (
     const onKeyUp = (event: KeyboardEvent) => {
       // Check if the target is an input field to avoid interfering with text editing
       const target = event.target as HTMLElement;
-      const isInputField = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
-      
-      if (
-        event.key === "Delete" &&
-        !isInputField &&
-        refs.fabricRef.current
-      ) {
+      const isInputField =
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable;
+
+      if (event.key === "Delete" && !isInputField && refs.fabricRef.current) {
         handleDelete(refs.fabricRef.current, deleteShapeFromStorage);
       }
     };
@@ -266,6 +314,7 @@ export const useCanvasManagement = (
     deleteAllShapes,
     deleteShapeFromStorage,
     syncShapeInStorage,
+    syncMultipleShapesInStorage,
     handleActiveElement,
     handlePremadeShapeSelect,
   };

@@ -6,25 +6,47 @@ import { CustomFabricObject } from "@/types/type";
 export const handleCopy = (canvas: fabric.Canvas) => {
   const activeObjects = canvas.getActiveObjects();
   if (activeObjects.length > 0) {
-    // Serialize the selected objects with all custom properties
+    // Serialize the selected objects with all properties
     const serializedObjects = activeObjects.map((obj) => {
-      const objData = obj.toObject();
-      // Preserve custom properties
-      if ((obj as CustomFabricObject).objectId) {
-        objData.objectId = (obj as CustomFabricObject).objectId;
+      // Use toObject with additional properties to ensure all data is captured
+      const objData = obj.toObject([
+        "objectId",
+        "storageId",
+        "zIndex",
+        "premadeName",
+        "selectable",
+        "evented",
+        "perPixelTargetFind",
+      ]);
+
+      // Ensure we preserve all custom properties from loaded objects
+      const customObj = obj as CustomFabricObject & {
+        storageId?: string;
+        zIndex?: number;
+        premadeName?: string;
+      };
+
+      // Always set objectId (required for all objects)
+      if (customObj.objectId) {
+        objData.objectId = customObj.objectId;
       }
-      if ((obj as CustomFabricObject & { storageId?: string }).storageId) {
-        objData.storageId = (obj as CustomFabricObject & { storageId?: string }).storageId;
+
+      // Preserve other custom properties if they exist
+      if (customObj.storageId) {
+        objData.storageId = customObj.storageId;
       }
-      if ((obj as CustomFabricObject & { zIndex?: number }).zIndex !== undefined) {
-        objData.zIndex = (obj as CustomFabricObject & { zIndex?: number }).zIndex;
+
+      if (customObj.zIndex !== undefined) {
+        objData.zIndex = customObj.zIndex;
       }
-      if ((obj as CustomFabricObject & { premadeName?: string }).premadeName) {
-        objData.premadeName = (obj as CustomFabricObject & { premadeName?: string }).premadeName;
+
+      if (customObj.premadeName) {
+        objData.premadeName = customObj.premadeName;
       }
+
       return objData;
     });
-    
+
     // Store the serialized objects in the clipboard
     try {
       localStorage.setItem("clipboard", JSON.stringify(serializedObjects));
@@ -66,42 +88,55 @@ export const handlePaste = (
 
     const pastedObjects: fabric.Object[] = [];
 
+    // Process all objects synchronously to avoid async issues
+    const pastedObjectsData: Record<string, unknown>[] = [];
+
+    // First, prepare all the object data with new IDs
     parsedObjects.forEach((objData: Record<string, unknown>) => {
-      // convert the plain javascript objects retrieved from localStorage into fabricjs objects (deserialization)
-      fabric.util.enlivenObjects(
-        [objData],
-        (enlivenedObjects: fabric.Object[]) => {
-          enlivenedObjects.forEach((enlivenedObj) => {
-            // Generate new ID for the pasted object
-            const newObjectId = uuidv4();
-            
-            // Offset the pasted objects to avoid overlap with existing objects
-            const offsetX = 20;
-            const offsetY = 20;
-            
-            enlivenedObj.set({
-              left: (enlivenedObj.left || 0) + offsetX,
-              top: (enlivenedObj.top || 0) + offsetY,
-              objectId: newObjectId,
-            } as CustomFabricObject);
+      const newObjectData = { ...objData };
 
-            // Preserve original fill color instead of overriding
-            if (objData.fill && typeof objData.fill === "string" && objData.fill !== "#aabbcc") {
-              enlivenedObj.set("fill", objData.fill);
-            }
+      // Generate new unique ID for the pasted object
+      const newObjectId = uuidv4();
+      newObjectData.objectId = newObjectId;
 
-            // Preserve other custom properties but with new IDs
-            if (objData.premadeName && typeof objData.premadeName === "string") {
-              (enlivenedObj as CustomFabricObject & { premadeName?: string }).premadeName = objData.premadeName;
-            }
+      // Remove storageId to prevent conflicts
+      delete newObjectData.storageId;
 
-            canvas.add(enlivenedObj);
-            pastedObjects.push(enlivenedObj);
-            syncShapeInStorage(enlivenedObj);
+      // Offset position
+      const offsetX = 20;
+      const offsetY = 20;
+      if (typeof newObjectData.left === "number") {
+        newObjectData.left = newObjectData.left + offsetX;
+      }
+      if (typeof newObjectData.top === "number") {
+        newObjectData.top = newObjectData.top + offsetY;
+      }
+
+      pastedObjectsData.push(newObjectData);
+    });
+
+    // Now enliven all objects at once
+    fabric.util.enlivenObjects(
+      pastedObjectsData,
+      (enlivenedObjects: fabric.Object[]) => {
+        enlivenedObjects.forEach((enlivenedObj) => {
+          // Ensure object is properly configured
+          enlivenedObj.set({
+            selectable: true,
+            evented: true,
           });
 
-          // Select the pasted objects if there are any
-          if (pastedObjects.length > 0) {
+          // Add to canvas
+          canvas.add(enlivenedObj);
+          pastedObjects.push(enlivenedObj);
+
+          // Sync to storage after adding to canvas
+          syncShapeInStorage(enlivenedObj);
+        });
+
+        // Select the pasted objects
+        if (pastedObjects.length > 0) {
+          setTimeout(() => {
             if (pastedObjects.length === 1) {
               canvas.setActiveObject(pastedObjects[0]);
             } else {
@@ -110,14 +145,15 @@ export const handlePaste = (
               });
               canvas.setActiveObject(selection);
             }
-          }
-
-          canvas.renderAll();
-          console.log(`Pasted ${pastedObjects.length} object(s)`);
-        },
-        "fabric"
-      );
-    });
+            canvas.renderAll();
+            console.log(
+              `Successfully pasted ${pastedObjects.length} object(s)`
+            );
+          }, 10);
+        }
+      },
+      "fabric"
+    );
   } catch (error) {
     console.error("Error parsing clipboard data:", error);
   }
@@ -166,46 +202,52 @@ export const handleKeyDown = ({
 }) => {
   // Check if the target is an input field to avoid interfering with text editing
   const target = e.target as HTMLElement;
-  const isInputField = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
-  
+  const isInputField =
+    target.tagName === "INPUT" ||
+    target.tagName === "TEXTAREA" ||
+    target.isContentEditable;
+
   // Skip keyboard shortcuts if user is typing in an input field
   if (isInputField) {
     return;
   }
 
   // Check if the key pressed is ctrl/cmd + c (copy)
-  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "c") {
     e.preventDefault();
     handleCopy(canvas);
   }
 
   // Check if the key pressed is ctrl/cmd + v (paste)
-  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "v") {
     e.preventDefault();
     handlePaste(canvas, syncShapeInStorage);
   }
 
   // check if the key pressed is ctrl/cmd + x (cut)
-  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'x') {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "x") {
     e.preventDefault();
     handleCopy(canvas);
     handleDelete(canvas, deleteShapeFromStorage);
   }
 
   // check if the key pressed is ctrl/cmd + z (undo)
-  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z" && !e.shiftKey) {
     e.preventDefault();
     undo();
   }
 
   // check if the key pressed is ctrl/cmd + y (redo) or ctrl/cmd + shift + z
-  if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'y' || (e.key.toLowerCase() === 'z' && e.shiftKey))) {
+  if (
+    (e.ctrlKey || e.metaKey) &&
+    (e.key.toLowerCase() === "y" || (e.key.toLowerCase() === "z" && e.shiftKey))
+  ) {
     e.preventDefault();
     redo();
   }
 
   // Prevent "/" key from triggering browser search
-  if (e.key === '/' && !e.shiftKey) {
+  if (e.key === "/" && !e.shiftKey) {
     e.preventDefault();
   }
 };

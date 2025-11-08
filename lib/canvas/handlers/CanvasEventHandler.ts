@@ -13,19 +13,22 @@ export class CanvasEventHandler {
   /**
    * Handles object modification events
    */
-  static handleCanvasObjectModified({
-    options,
-    syncShapeInStorage,
-  }: CanvasObjectModified): void {
+  static handleCanvasObjectModified({ options }: CanvasObjectModified): void {
     const target = options.target;
     if (!target) return;
 
     if (target?.type === "activeSelection") {
-      // Multiple selection handling - skip for now, handle in selection:cleared
+      // Multiple selection handling - mark all objects as modified, don't sync yet
+      const activeSelection = target as fabric.ActiveSelection;
+      activeSelection.forEachObject((obj: fabric.Object) => {
+        (obj as fabric.Object & { _wasModified?: boolean })._wasModified = true;
+      });
       return;
     } else {
-      // Single object handling - this works perfectly
-      syncShapeInStorage(target);
+      // Single object handling - only mark as modified for movements
+      // Sync will happen when selection is cleared to create single undo entry
+      (target as fabric.Object & { _wasModified?: boolean })._wasModified =
+        true;
     }
   }
 
@@ -132,16 +135,26 @@ export class CanvasEventHandler {
    */
   static handleCanvasSelectionCleared({
     canvas,
-    syncShapeInStorage,
+    syncMultipleShapesInStorage,
   }: {
     canvas: fabric.Canvas;
-    syncShapeInStorage: (shape: fabric.Object) => void;
+    syncMultipleShapesInStorage: (objects: fabric.Object[]) => void;
   }): void {
-    // When selection is cleared, sync all objects to ensure positions are saved
-    canvas.getObjects().forEach((obj) => {
-      obj.setCoords();
-      syncShapeInStorage(obj);
+    // Only sync objects that have been marked as modified during movement
+    const modifiedObjects = canvas.getObjects().filter((obj) => {
+      return (obj as fabric.Object & { _wasModified?: boolean })._wasModified;
     });
+
+    if (modifiedObjects.length > 0) {
+      modifiedObjects.forEach((obj) => {
+        obj.setCoords();
+        // Clear the modification flag
+        delete (obj as fabric.Object & { _wasModified?: boolean })._wasModified;
+      });
+
+      // Use batch sync for better undo/redo support
+      syncMultipleShapesInStorage(modifiedObjects);
+    }
   }
 
   /**
