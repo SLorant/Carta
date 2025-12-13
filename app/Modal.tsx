@@ -16,7 +16,6 @@ type ModalProps = {
   router: AppRouterInstance;
 };
 
-// TODO: types
 const Modal = ({ type, onClose, setModal, router }: ModalProps) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

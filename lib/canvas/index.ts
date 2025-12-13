@@ -1,4 +1,3 @@
-// Main canvas exports - this will be the new canvas.ts file
 export { CanvasInitializer } from "./core/CanvasInitializer";
 export { CanvasRenderer } from "./core/CanvasRenderer";
 export { MouseEventHandler } from "./handlers/MouseEventHandler";

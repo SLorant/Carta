@@ -1,6 +1,3 @@
-// Professional refactored canvas module
-// This file maintains backward compatibility while using the new modular architecture
-
 export {
   // Core functionality
   initializeFabric,
